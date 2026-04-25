@@ -1,5 +1,6 @@
 import { addMandat } from '../data/store.js'
 
+
 export function renderSaisie(config = {}) {
   const moisOptions = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'].map(m=>`<option>${m}</option>`).join('')
   return `
