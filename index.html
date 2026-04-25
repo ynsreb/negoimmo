@@ -6,297 +6,574 @@
   <title>NégoImmo · KPI 2026</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/style.css" />
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0a0a0a;--surface:#111111;--surface2:#1a1a1a;--surface3:#222222;
+      --border:#1f1f1f;--border2:#2a2a2a;--border3:#333333;
+      --text:#f0f0f0;--muted:#666666;--muted2:#999999;
+      --green:#4ade80;--green-bg:rgba(74,222,128,0.08);
+      --amber:#fbbf24;--amber-bg:rgba(251,191,36,0.08);
+      --red:#f87171;--red-bg:rgba(248,113,113,0.08);
+      --blue:#60a5fa;--blue-bg:rgba(96,165,250,0.08);
+    }
+    html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Syne',sans-serif}
+    .app{max-width:1040px;margin:0 auto;padding:0 1.25rem 4rem}
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:0.5px solid var(--border2);margin-bottom:32px}
+    .nav-logo{font-size:15px;font-weight:700;letter-spacing:-0.5px}
+    .nav-logo span{color:var(--muted)}
+    .nav-right{display:flex;align-items:center;gap:8px}
+    .nav-tabs{display:flex;gap:2px;background:var(--surface);border:0.5px solid var(--border2);border-radius:8px;padding:3px}
+    .tab-btn{font-family:'Syne',sans-serif;font-size:12px;font-weight:500;padding:6px 14px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--muted);transition:all 0.15s}
+    .tab-btn.active{background:var(--text);color:var(--bg)}
+    .tab-btn:hover:not(.active){color:var(--text)}
+    .btn-logout{font-family:'Syne',sans-serif;font-size:11px;padding:6px 12px;border-radius:6px;border:0.5px solid var(--border3);background:transparent;color:var(--muted);cursor:pointer;transition:all 0.15s}
+    .btn-logout:hover{color:var(--text)}
+    .page{animation:fadeIn 0.2s ease}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+    .page-title{font-size:26px;font-weight:700;letter-spacing:-0.8px;margin-bottom:4px}
+    .page-sub{font-size:13px;color:var(--muted);margin-bottom:24px}
+    .section-label{font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin:20px 0 10px}
+
+    /* KPI GRID */
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border2);border:0.5px solid var(--border2);border-radius:10px;overflow:hidden;margin-bottom:16px}
+    .kpi-card{background:var(--surface);padding:16px 18px}
+    .kpi-label{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px}
+    .kpi-value{font-family:'DM Mono',monospace;font-size:21px;font-weight:500;line-height:1;margin-bottom:3px}
+    .kpi-sub{font-size:11px;color:var(--muted)}
+    .ok{color:var(--green)}.warn{color:var(--amber)}.bad{color:var(--red)}.neu{color:var(--text)}
+
+    /* TAUX GRID */
+    .taux-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+    .taux-card{background:var(--surface);border:0.5px solid var(--border2);border-radius:10px;padding:14px 16px}
+    .taux-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+    .taux-title{font-size:11px;font-weight:500;color:var(--muted2)}
+    .taux-pct{font-family:'DM Mono',monospace;font-size:13px;font-weight:500}
+    .taux-track{height:2px;background:var(--surface3);border-radius:1px;overflow:hidden;margin-bottom:5px}
+    .taux-fill{height:100%;border-radius:1px}
+    .taux-detail{font-size:10px;color:var(--muted)}
+
+    /* CHART */
+    .chart-wrap{background:var(--surface);border:0.5px solid var(--border2);border-radius:10px;padding:16px 18px;margin-bottom:16px}
+    .bar-chart{display:flex;align-items:flex-end;gap:4px;height:80px;margin-top:10px}
+    .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%}
+    .bar-wrap{flex:1;width:100%;display:flex;align-items:flex-end}
+    .bar{width:100%;border-radius:2px 2px 0 0;background:var(--surface3)}
+    .bar.on{background:var(--text)}
+    .bar-lbl{font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;min-height:10px;text-align:center}
+    .bar-m{font-size:9px;color:var(--muted)}
+
+    /* FORMS */
+    .form-card{background:var(--surface);border:0.5px solid var(--border2);border-radius:10px;padding:22px;margin-bottom:14px}
+    .form-title{font-size:15px;font-weight:700;letter-spacing:-0.3px;margin-bottom:18px}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .form-group{display:flex;flex-direction:column;gap:4px}
+    .form-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em}
+    .form-input,.form-select{font-family:'Syne',sans-serif;font-size:13px;border:0.5px solid var(--border3);border-radius:6px;padding:8px 10px;background:var(--surface2);color:var(--text);outline:none;width:100%;transition:border 0.15s}
+    .form-input:focus,.form-select:focus{border-color:var(--muted2)}
+    .form-input::placeholder{color:var(--muted)}
+    .form-input.auto{background:var(--surface3);color:var(--muted2);cursor:default}
+    .form-input.highlight{background:rgba(74,222,128,0.06);color:var(--green);border-color:rgba(74,222,128,0.2)}
+    .form-actions{display:flex;gap:8px;margin-top:14px}
+    .btn-p{font-family:'Syne',sans-serif;font-size:13px;font-weight:600;background:var(--text);color:var(--bg);border:none;border-radius:6px;padding:9px 20px;cursor:pointer;transition:opacity 0.15s}
+    .btn-p:hover{opacity:0.85}
+    .btn-s{font-family:'Syne',sans-serif;font-size:13px;font-weight:500;background:transparent;color:var(--muted2);border:0.5px solid var(--border3);border-radius:6px;padding:9px 20px;cursor:pointer;transition:all 0.15s}
+    .btn-s:hover{color:var(--text);border-color:var(--muted)}
+
+    /* TABLES */
+    .table-wrap{background:var(--surface);border:0.5px solid var(--border2);border-radius:10px;overflow:hidden;margin-bottom:14px}
+    .table-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:0.5px solid var(--border2)}
+    .table-count{font-size:11px;color:var(--muted)}
+    .t-head-m{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 0.5fr;padding:7px 16px;border-bottom:0.5px solid var(--border2)}
+    .t-head-c{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 0.5fr;padding:7px 16px;border-bottom:0.5px solid var(--border2)}
+    .th{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em}
+    .table-body{max-height:400px;overflow-y:auto}
+    .row-m{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 0.5fr;padding:10px 16px;border-bottom:0.5px solid var(--border);align-items:center;transition:background 0.1s}
+    .row-c{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 0.5fr;padding:10px 16px;border-bottom:0.5px solid var(--border);align-items:center;transition:background 0.1s}
+    .row-m:last-child,.row-c:last-child{border-bottom:none}
+    .row-m:hover,.row-c:hover{background:var(--surface2)}
+    .td{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .td-m{font-family:'DM Mono',monospace;font-size:11px}
+    .td-g{font-family:'DM Mono',monospace;font-size:11px;color:var(--green)}
+    .td-mu{font-size:11px;color:var(--muted)}
+    .td-act{display:flex;justify-content:flex-end}
+    .btn-del{font-size:11px;background:none;border:none;cursor:pointer;color:var(--muted);padding:3px 6px;border-radius:4px;transition:all 0.1s}
+    .btn-del:hover{background:var(--red-bg);color:var(--red)}
+
+    /* BADGES */
+    .badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px}
+    .b-excl{background:var(--green-bg);color:var(--green)}
+    .b-simp{background:var(--blue-bg);color:var(--blue)}
+    .b-comp{background:var(--amber-bg);color:var(--amber)}
+    .b-acte{background:var(--green-bg);color:var(--green)}
+    .b-cours{background:var(--surface3);color:var(--muted2)}
+    .b-perdu{background:var(--red-bg);color:var(--red)}
+
+    /* REMU */
+    .remu-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+    .remu-card{background:var(--surface);border:0.5px solid var(--border2);border-radius:10px;padding:18px}
+    .remu-head{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;padding-bottom:8px;border-bottom:0.5px solid var(--border2)}
+    .big-n{font-family:'DM Mono',monospace;font-size:28px;font-weight:500;line-height:1;margin-bottom:3px}
+    .big-s{font-size:11px;color:var(--muted);margin-bottom:12px}
+    .pl-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--border);font-size:12px}
+    .pl-row:last-child{border-bottom:none}
+    .pl-addr{font-weight:500}
+    .pl-sub{font-size:10px;color:var(--muted);margin-top:1px}
+    .pl-val{font-family:'DM Mono',monospace;color:var(--amber);font-size:11px}
+    .tot-row{display:flex;justify-content:space-between;padding:5px 0;font-size:12px}
+    .tot-lbl{color:var(--muted)}
+    .tot-val{font-family:'DM Mono',monospace;font-weight:500}
+    .div{height:0.5px;background:var(--border2);margin:12px 0}
+    .proj-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border2);border:0.5px solid var(--border2);border-radius:10px;overflow:hidden;margin-top:8px}
+    .proj-cell{background:var(--surface);padding:14px 16px}
+    .proj-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px}
+    .proj-val{font-family:'DM Mono',monospace;font-size:18px;font-weight:500}
+    .recap-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+    .recap-card{background:var(--surface);border:0.5px solid var(--border2);border-radius:10px;padding:14px}
+    .recap-head{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;padding-bottom:7px;border-bottom:0.5px solid var(--border2)}
+    .recap-row{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:0.5px solid var(--border)}
+    .recap-row:last-child{border-bottom:none}
+    .recap-m{color:var(--muted)}
+    .recap-v{font-family:'DM Mono',monospace;font-size:11px;font-weight:500}
+    .recap-empty{font-size:12px;color:var(--muted);padding:6px 0}
+
+    /* LOGIN */
+    .login-wrap{max-width:380px;margin:5rem auto;padding:0 1rem}
+    .login-logo{font-size:24px;font-weight:800;letter-spacing:-0.8px;text-align:center;margin-bottom:6px}
+    .login-logo span{color:var(--muted)}
+    .login-sub{font-size:12px;color:var(--muted);text-align:center;margin-bottom:24px}
+    .login-card{background:var(--surface);border:0.5px solid var(--border2);border-radius:12px;padding:22px}
+    .login-tabs{display:flex;gap:2px;background:var(--surface2);border-radius:7px;padding:3px;margin-bottom:18px}
+    .login-tab{flex:1;font-family:'Syne',sans-serif;font-size:13px;font-weight:500;padding:7px;border-radius:5px;border:none;cursor:pointer;background:transparent;color:var(--muted);transition:all 0.15s;text-align:center}
+    .login-tab.active{background:var(--text);color:var(--bg)}
+    .auth-err{display:none;font-size:12px;color:var(--red);margin-bottom:10px;padding:8px;background:var(--red-bg);border-radius:6px}
+    .toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:var(--bg);font-family:'Syne',sans-serif;font-size:13px;font-weight:600;padding:10px 18px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity 0.25s,transform 0.25s;transform:translateY(8px);z-index:999}
+    .toast.show{opacity:1;transform:translateY(0)}
+    .empty-st{text-align:center;padding:2.5rem;color:var(--muted);font-size:13px}
+    @media(max-width:700px){
+      .kpi-grid,.taux-grid{grid-template-columns:1fr 1fr}
+      .remu-grid,.recap-grid{grid-template-columns:1fr}
+      .form-grid{grid-template-columns:1fr}
+    }
+  </style>
 </head>
 <body>
-  <div id="app">
-    <div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#7a786f;font-size:14px">
-      Chargement…
-    </div>
-  </div>
+  <div id="app"><div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#444;font-size:14px;font-family:Syne,sans-serif">Chargement…</div></div>
   <div class="toast" id="toast"></div>
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
-
     const SUPABASE_URL  = 'https://kkuplsgymvbyylkqrtdk.supabase.co'
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrdXBsc2d5bXZieXlsa3FydGRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMjUyNjcsImV4cCI6MjA5MjcwMTI2N30.yC-o4cA2wovJj4okPoZTSNXtWDIggU8gdpNQWfgSAsA'
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON)
+    const sb = createClient(SUPABASE_URL, SUPABASE_ANON)
 
-    const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
-    const CONFIG_DEFAULTS = { objectif_ca:160000, objectif_ca_off:200000, objectif_excl_pct:50, objectif_mandats:36, taux_tva:1.20, annee:2026, mois_ecoules:3.6 }
+    const MS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
+    const MSH = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc']
+    const CFG = {objectif_ca:160000,objectif_ca_off:200000,objectif_excl_pct:50,objectif_mandats:36,annee:2026,mois_ecoules:3.6}
     const fmt  = v => (+v||0).toLocaleString('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0})
+    const fmtD = v => (+v||0).toLocaleString('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:2})
     const fmtN = v => Math.round(+v||0).toLocaleString('fr-FR')
-    const moisNum = d => d ? new Date(d).getMonth()+1 : null
+    const moisNum = d => d?new Date(d).getMonth()+1:null
+    const pct = (a,b) => b?Math.round(a/b*100)+'%':'—'
 
-    let _user=null, _mandats=[], _config={...CONFIG_DEFAULTS}, _currentPage='dashboard'
+    let _user=null,_mandats=[],_compromis=[],_cfg={...CFG},_page='dashboard'
+    let _rdv=0,_visites=0
 
-    // ── AUTH ──
-    const getUser   = async () => (await supabase.auth.getUser()).data.user
-    const login     = async (e,p) => { const {data,error}=await supabase.auth.signInWithPassword({email:e,password:p}); if(error)throw error; return data }
-    const signup    = async (e,p) => { const {data,error}=await supabase.auth.signUp({email:e,password:p}); if(error)throw error; return data }
-    const logout    = async () => supabase.auth.signOut()
+    const getUser = async()=>(await sb.auth.getUser()).data.user
+    const doLogin = async(e,p)=>{const{data,error}=await sb.auth.signInWithPassword({email:e,password:p});if(error)throw error;return data}
+    const doSignup= async(e,p)=>{const{data,error}=await sb.auth.signUp({email:e,password:p});if(error)throw error;return data}
+    const doLogout= async()=>sb.auth.signOut()
+    const getCfg  = async()=>{const{data}=await sb.from('config').select('*').eq('user_id',_user.id).maybeSingle();return{...CFG,...data}}
+    const getMan  = async()=>{const{data,error}=await sb.from('mandats').select('*').order('created_at',{ascending:false});if(error)throw error;return data||[]}
+    const getCom  = async()=>{const{data,error}=await sb.from('compromis').select('*').order('date_compromis',{ascending:false});if(error)throw error;return data||[]}
 
-    // ── DATA ──
-    const getConfig  = async () => { const {data}=await supabase.from('config').select('*').eq('user_id',_user.id).maybeSingle(); return {...CONFIG_DEFAULTS,...data} }
-    const getMandats = async () => { const {data,error}=await supabase.from('mandats').select('*').order('created_at',{ascending:false}); if(error)throw error; return data||[] }
-    const addMandatDB = async m => {
-      const hon_ht = m.hon_ttc ? m.hon_ttc/1.20 : null
-      const comm_nego_ht = (hon_ht&&m.pct_nego) ? hon_ht*m.pct_nego/100 : null
-      const comm_nego_ttc = comm_nego_ht ? comm_nego_ht*1.20 : null
-      const {data,error}=await supabase.from('mandats').insert({user_id:_user.id,...m,hon_ht,comm_nego_ht,comm_nego_ttc}).select().single()
-      if(error)throw error; return data
+    const addMandat = async m=>{
+      const hon_ht=m.hon_ttc?m.hon_ttc/1.20:null
+      const{data,error}=await sb.from('mandats').insert({user_id:_user.id,...m,hon_ht}).select().single()
+      if(error)throw error;return data
     }
-    const deleteMandatDB = async id => { const {error}=await supabase.from('mandats').delete().eq('id',id); if(error)throw error }
+    const addCompromis = async c=>{
+      const hon_ht=c.hon_ttc_reel?c.hon_ttc_reel/1.20:null
+      const ca_nego_ht=hon_ht&&c.pct_nego?hon_ht*c.pct_nego/100:null
+      const{data,error}=await sb.from('compromis').insert({user_id:_user.id,...c,hon_ht_reel:hon_ht,ca_nego_ht}).select().single()
+      if(error)throw error;return data
+    }
+    const delMandat   = async id=>{const{error}=await sb.from('mandats').delete().eq('id',id);if(error)throw error}
+    const delCompromis= async id=>{const{error}=await sb.from('compromis').delete().eq('id',id);if(error)throw error}
 
-    // ── STATS ──
-    const computeStats = (mandats, config) => {
-      const m26=mandats.filter(m=>!m.is_2025), m25=mandats.filter(m=>m.is_2025)
-      const excl26=m26.filter(m=>m.type_mandat==='Exclusif').length
-      const tauxExcl=m26.length?excl26/m26.length:0
-      const comp26=m26.filter(m=>m.date_compromis), comp25=m25.filter(m=>m.date_compromis&&String(m.date_compromis).startsWith('2026'))
-      const actes26=m26.filter(m=>m.date_acte), actes25=m25.filter(m=>m.date_acte&&String(m.date_acte).startsWith('2026'))
-      const totalCommHT=[...actes26,...actes25].reduce((s,m)=>s+(+m.comm_nego_ht||0),0)
-      const moisEc=config.mois_ecoules||3.6
-      const projCA=moisEc>0?totalCommHT/moisEc*12:0
-      const totalComp=comp26.length+comp25.length
-      const commActeParMois=Array(12).fill(0), compParMois=Array(12).fill(0), actesParMois=Array(12).fill(0)
-      ;[...comp26,...comp25].forEach(m=>{const mn=moisNum(m.date_compromis);if(mn)compParMois[mn-1]++})
-      ;[...actes26,...actes25].forEach(m=>{const mn=moisNum(m.date_acte);if(mn){actesParMois[mn-1]++;commActeParMois[mn-1]+=(+m.comm_nego_ht||0)}})
-      const pipeline=[...comp26,...comp25].filter(m=>!m.date_acte)
-      return { totalMandats26:m26.length, exclusifs26:excl26, tauxExcl, totalComp, totalActes:actes26.length+actes25.length,
-        totalCommHT, totalCommTTC:totalCommHT*1.20, projCA, panierMoyen:totalComp?totalCommHT/totalComp:0,
-        avancementCA:totalCommHT/(config.objectif_ca||160000), commActeParMois, compParMois, actesParMois,
-        pipeline, pipelineComm:pipeline.reduce((s,m)=>s+(+m.comm_nego_ht||0),0),
-        m26, m25, actes26, actes25, comp26, comp25 }
+    const computeStats=()=>{
+      const excl=_mandats.filter(m=>m.type_mandat==='Exclusif').length
+      const tauxExcl=_mandats.length?excl/_mandats.length:0
+      const tauxRdv=_rdv&&_mandats.length?_mandats.length/_rdv:0
+      const tauxTransfo=_mandats.length&&_compromis.length?_compromis.length/_mandats.length:0
+      const totalUV=_compromis.reduce((s,c)=>s+(+c.unite_vente||0),0)
+      const totalCA=_compromis.reduce((s,c)=>s+(+c.ca_nego_ht||0),0)
+      const panier=totalUV?totalCA/totalUV:0
+      const me=_cfg.mois_ecoules||3.6
+      const projCA=me>0?totalCA/me*12:0
+      const avCA=totalCA/(_cfg.objectif_ca||160000)
+      const caParMois=Array(12).fill(0),uvParMois=Array(12).fill(0),compParMois=Array(12).fill(0)
+      _compromis.forEach(c=>{
+        const mn=moisNum(c.date_compromis)
+        if(mn){caParMois[mn-1]+=(+c.ca_nego_ht||0);uvParMois[mn-1]+=(+c.unite_vente||0);compParMois[mn-1]++}
+      })
+      return{excl,tauxExcl,tauxRdv,tauxTransfo,totalUV,totalCA,panier,projCA,avCA,caParMois,uvParMois,compParMois}
     }
 
-    // ── TOAST ──
-    const showToast = (msg,dur=2500) => {
-      const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show')
+    const toast=(msg,dur=2500)=>{
+      const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show')
       setTimeout(()=>el.classList.remove('show'),dur)
     }
 
-    // ── RENDER LOGIN ──
-    const renderLogin = (mode='login') => {
-      document.getElementById('app').innerHTML = `
-        <div style="max-width:380px;margin:4rem auto;padding:0 1rem">
-          <div style="text-align:center;margin-bottom:2rem">
-            <div style="font-size:22px;font-weight:600;letter-spacing:-0.5px">négo<span style="color:var(--c-accent)">immo</span></div>
-            <div style="font-size:13px;color:var(--c-muted);margin-top:4px">KPI 2026 · Tableau de bord négociateur</div>
-          </div>
-          <div class="form-card">
-            <div style="display:flex;gap:4px;background:var(--c-bg);border-radius:8px;padding:3px;margin-bottom:1.25rem">
-              <button class="tab-btn ${mode==='login'?'active':''}" style="flex:1" id="btn-show-login">Connexion</button>
-              <button class="tab-btn ${mode==='signup'?'active':''}" style="flex:1" id="btn-show-signup">Inscription</button>
+    /* ── LOGIN ── */
+    const renderLogin=(mode='login')=>{
+      document.getElementById('app').innerHTML=`
+        <div class="login-wrap">
+          <div class="login-logo">négo<span>immo</span></div>
+          <div class="login-sub">Tableau de bord KPI · Négociateur immobilier</div>
+          <div class="login-card">
+            <div class="login-tabs">
+              <button class="login-tab ${mode==='login'?'active':''}" id="bl">Connexion</button>
+              <button class="login-tab ${mode==='signup'?'active':''}" id="bs">Inscription</button>
             </div>
             <div class="form-group" style="margin-bottom:10px">
               <label class="form-label">Email</label>
-              <input class="form-input" id="auth-email" type="email" placeholder="votre@email.com"/>
+              <input class="form-input" id="ae" type="email" placeholder="votre@email.com"/>
             </div>
-            <div class="form-group" style="margin-bottom:1.25rem">
+            <div class="form-group" style="margin-bottom:14px">
               <label class="form-label">Mot de passe</label>
-              <input class="form-input" id="auth-password" type="password" placeholder="••••••••"/>
+              <input class="form-input" id="ap" type="password" placeholder="••••••••"/>
             </div>
-            <div id="auth-error" style="display:none;font-size:12px;color:var(--c-danger);margin-bottom:10px;padding:8px;background:var(--c-danger-light);border-radius:6px"></div>
-            <button class="btn btn-primary" style="width:100%" id="btn-auth-submit">
-              ${mode==='login'?'Se connecter':'Créer mon compte'}
-            </button>
+            <div class="auth-err" id="aerr"></div>
+            <button class="btn-p" style="width:100%" id="ba">${mode==='login'?'Se connecter':'Créer mon compte'}</button>
           </div>
         </div>`
-      document.getElementById('btn-show-login').onclick = () => renderLogin('login')
-      document.getElementById('btn-show-signup').onclick = () => renderLogin('signup')
-      document.getElementById('auth-password').onkeydown = e => { if(e.key==='Enter') submitAuth(mode) }
-      document.getElementById('btn-auth-submit').onclick = () => submitAuth(mode)
+      document.getElementById('bl').onclick=()=>renderLogin('login')
+      document.getElementById('bs').onclick=()=>renderLogin('signup')
+      document.getElementById('ap').onkeydown=e=>{if(e.key==='Enter')submitAuth(mode)}
+      document.getElementById('ba').onclick=()=>submitAuth(mode)
     }
 
-    const submitAuth = async mode => {
-      const email = document.getElementById('auth-email').value.trim()
-      const password = document.getElementById('auth-password').value
-      const errEl = document.getElementById('auth-error')
-      if(!email||!password){ errEl.textContent='Veuillez remplir tous les champs.'; errEl.style.display='block'; return }
-      try {
-        errEl.style.display='none'
-        const btn=document.getElementById('btn-auth-submit'); btn.textContent='…'; btn.disabled=true
-        if(mode==='login'){ await login(email,password); await init() }
-        else { await signup(email,password); showToast('Compte créé ! Vérifiez votre email.'); renderLogin('login') }
-      } catch(e) {
-        const msgs={'Invalid login credentials':'Email ou mot de passe incorrect.','Email not confirmed':'Confirmez votre email d\'abord.','User already registered':'Un compte existe déjà avec cet email.'}
-        errEl.textContent=msgs[e.message]||e.message; errEl.style.display='block'
-        const btn=document.getElementById('btn-auth-submit'); btn.textContent=mode==='login'?'Se connecter':'Créer mon compte'; btn.disabled=false
+    const submitAuth=async mode=>{
+      const email=document.getElementById('ae').value.trim()
+      const pw=document.getElementById('ap').value
+      const err=document.getElementById('aerr')
+      if(!email||!pw){err.textContent='Remplissez tous les champs.';err.style.display='block';return}
+      try{
+        err.style.display='none'
+        const btn=document.getElementById('ba');btn.textContent='…';btn.disabled=true
+        if(mode==='login'){await doLogin(email,pw);await init()}
+        else{await doSignup(email,pw);toast('Compte créé ! Vérifiez votre email.');renderLogin('login')}
+      }catch(e){
+        const msgs={'Invalid login credentials':'Email ou mot de passe incorrect.','Email not confirmed':'Confirmez votre email.','User already registered':'Compte déjà existant.'}
+        err.textContent=msgs[e.message]||e.message;err.style.display='block'
+        const btn=document.getElementById('ba');btn.textContent=mode==='login'?'Se connecter':'Créer mon compte';btn.disabled=false
       }
     }
 
-    // ── RENDER APP ──
-    const render = () => {
-      const s=computeStats(_mandats,_config)
-      const tabs=['dashboard','saisie','mandats','remuneration'], labels=['Dashboard','Saisie','Mandats','Rémunération']
+    /* ── RENDER APP ── */
+    const render=()=>{
+      const tabs=['dashboard','mandats','compromis','remuneration']
+      const labels=['Dashboard','Mandats','Compromis','Rémunération']
       const nav=`<nav class="nav">
-        <div class="nav-logo">négo<span>immo</span> · KPI ${_config.annee||2026}</div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <div class="nav-tabs">${tabs.map((p,i)=>`<button class="tab-btn ${_currentPage===p?'active':''}" data-page="${p}">${labels[i]}</button>`).join('')}</div>
-          <button class="btn btn-secondary" style="font-size:11px;padding:5px 12px" id="btn-logout">Déconnexion</button>
+        <div class="nav-logo">négo<span>immo</span> · KPI ${_cfg.annee||2026}</div>
+        <div class="nav-right">
+          <div class="nav-tabs">${tabs.map((p,i)=>`<button class="tab-btn ${_page===p?'active':''}" data-page="${p}">${labels[i]}</button>`).join('')}</div>
+          <button class="btn-logout" id="blo">Déconnexion</button>
         </div></nav>`
-      document.getElementById('app').innerHTML = nav + `<div class="page active">${getPageContent(s)}</div>`
-      document.querySelectorAll('.tab-btn[data-page]').forEach(b=>b.onclick=()=>{_currentPage=b.dataset.page;render();window.scrollTo({top:0,behavior:'smooth'})})
-      document.getElementById('btn-logout').onclick = async()=>{ await logout(); _user=null; renderLogin() }
-      bindPageEvents(s)
+      document.getElementById('app').innerHTML=`<div class="app">${nav}<div class="page">${pageCnt()}</div></div>`
+      document.querySelectorAll('.tab-btn[data-page]').forEach(b=>b.onclick=()=>{_page=b.dataset.page;render();window.scrollTo({top:0,behavior:'smooth'})})
+      document.getElementById('blo').onclick=async()=>{await doLogout();_user=null;renderLogin()}
+      bindEvents()
     }
 
-    const getPageContent = s => {
-      if(_currentPage==='dashboard') return renderDashboard(s)
-      if(_currentPage==='saisie')    return renderSaisie()
-      if(_currentPage==='mandats')   return renderMandats()
-      if(_currentPage==='remuneration') return renderRemuneration(s)
+    const pageCnt=()=>{
+      if(_page==='dashboard')    return renderDash()
+      if(_page==='mandats')      return renderMandats()
+      if(_page==='compromis')    return renderCompromis()
+      if(_page==='remuneration') return renderRemu()
       return ''
     }
 
-    // ── DASHBOARD ──
-    const renderDashboard = s => {
-      const avPct=Math.round(s.avancementCA*100), avPctOff=Math.round(s.totalCommHT/(_config.objectif_ca_off||200000)*100)
-      const avMand=Math.round(s.totalMandats26/(_config.objectif_mandats||36)*100)
-      const moisEc=_config.mois_ecoules||3.6
-      const caColor=avPct>=50?'kpi-ok':avPct>=35?'kpi-warn':'kpi-danger'
-      const exclColor=s.tauxExcl>=0.5?'kpi-ok':'kpi-warn'
-      const months=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc']
-      const barMax=Math.max(...s.commActeParMois,1)
-      const bars=months.map((mn,i)=>{const v=s.commActeParMois[i],h=Math.round(v/barMax*100)
-        return `<div class="bar-col"><div class="bar-wrap"><div class="bar" style="height:${h}%;background:${v>0?'var(--c-accent)':'var(--c-border)'}"></div></div>
-          <div class="bar-label">${v>0?fmt(v).replace('\u00a0€',''):''}</div><div class="bar-month">${mn}</div></div>`}).join('')
-      return `
+    /* ── DASHBOARD ── */
+    const renderDash=()=>{
+      const s=computeStats()
+      const avPct=Math.round(s.avCA*100)
+      const avPctOff=Math.round(s.totalCA/(_cfg.objectif_ca_off||200000)*100)
+      const avMand=Math.round(_mandats.length/(_cfg.objectif_mandats||36)*100)
+      const me=_cfg.mois_ecoules||3.6
+      const caCol=avPct>=50?'ok':avPct>=35?'warn':'bad'
+      const exCol=s.tauxExcl>=0.5?'ok':'warn'
+      const barMax=Math.max(...s.caParMois,1)
+      const bars=MSH.map((mn,i)=>{const v=s.caParMois[i],h=Math.round(v/barMax*100)
+        return`<div class="bar-col"><div class="bar-wrap"><div class="bar${v>0?' on':''}" style="height:${h||6}%"></div></div>
+          <div class="bar-lbl">${v>0?fmt(v).replace('\u00a0€',''):''}</div><div class="bar-m">${mn}</div></div>`}).join('')
+      return`
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub">Vue d'ensemble · ${me} mois écoulés sur 12</div>
         <div class="kpi-grid">
-          <div class="kpi-card"><div class="kpi-label">CA réalisé (actes)</div><div class="kpi-value ${caColor}">${fmt(s.totalCommHT)}</div><div class="kpi-sub">obj. ${fmt(_config.objectif_ca||160000)} · ${avPct}% atteint</div></div>
-          <div class="kpi-card"><div class="kpi-label">Unités de vente</div><div class="kpi-value kpi-neutral">${s.totalComp}</div><div class="kpi-sub">compromis · ${s.totalActes} actes</div></div>
-          <div class="kpi-card"><div class="kpi-label">Taux d'exclusivité</div><div class="kpi-value ${exclColor}">${Math.round(s.tauxExcl*100)}%</div><div class="kpi-sub">obj. 50% · ${s.exclusifs26}/${s.totalMandats26}</div></div>
-          <div class="kpi-card"><div class="kpi-label">Panier moyen</div><div class="kpi-value kpi-neutral">${s.totalComp?fmt(s.panierMoyen):'—'}</div><div class="kpi-sub">comm. négo HT / vente</div></div>
+          <div class="kpi-card"><div class="kpi-label">CA réalisé HT</div><div class="kpi-value ${caCol}">${fmt(s.totalCA)}</div><div class="kpi-sub">obj. ${fmt(_cfg.objectif_ca||160000)} · ${avPct}%</div></div>
+          <div class="kpi-card"><div class="kpi-label">Unités de vente</div><div class="kpi-value neu">${s.totalUV}</div><div class="kpi-sub">${_compromis.length} compromis signés</div></div>
+          <div class="kpi-card"><div class="kpi-label">Panier moyen</div><div class="kpi-value neu">${s.totalUV?fmt(s.panier):'—'}</div><div class="kpi-sub">CA HT / unité de vente</div></div>
+          <div class="kpi-card"><div class="kpi-label">Taux d'exclusivité</div><div class="kpi-value ${exCol}">${Math.round(s.tauxExcl*100)}%</div><div class="kpi-sub">obj. 50% · ${s.excl}/${_mandats.length}</div></div>
         </div>
-        <div class="progress-section">
-          <div class="progress-card"><div class="progress-header"><span class="progress-title">CA officiel (${fmt(_config.objectif_ca||160000)})</span><span class="progress-pct ${caColor}">${avPct}%</span></div>
-            <div class="progress-track"><div class="progress-fill" style="width:${Math.min(avPct,100)}%;background:var(--c-accent)"></div></div>
-            <div class="progress-detail"><span>${fmt(s.totalCommHT)}</span><span>Proj. ${fmt(Math.round(s.projCA))}</span></div></div>
-          <div class="progress-card"><div class="progress-header"><span class="progress-title">CA officieux (${fmt(_config.objectif_ca_off||200000)})</span><span class="progress-pct ${avPctOff>=50?'kpi-ok':'kpi-warn'}">${avPctOff}%</span></div>
-            <div class="progress-track"><div class="progress-fill" style="width:${Math.min(avPctOff,100)}%;background:var(--c-amber)"></div></div>
-            <div class="progress-detail"><span>${fmt(s.totalCommHT)}</span><span>Proj. ${fmt(Math.round(s.projCA))}</span></div></div>
-          <div class="progress-card"><div class="progress-header"><span class="progress-title">Mandats (obj. ${_config.objectif_mandats||36}/an)</span><span class="progress-pct ${avMand>=40?'kpi-ok':'kpi-warn'}">${avMand}%</span></div>
-            <div class="progress-track"><div class="progress-fill" style="width:${Math.min(avMand,100)}%;background:var(--c-blue)"></div></div>
-            <div class="progress-detail"><span>${s.totalMandats26} pris</span><span>Proj. ${Math.round(moisEc>0?s.totalMandats26/moisEc*12:0)}</span></div></div>
-          <div class="progress-card"><div class="progress-header"><span class="progress-title">Actes authentiques</span><span class="progress-pct kpi-neutral">${s.totalActes}</span></div>
-            <div class="progress-track"><div class="progress-fill" style="width:${Math.min(s.totalActes/12*100,100)}%;background:var(--c-accent2)"></div></div>
-            <div class="progress-detail"><span>${s.actes25.length} mandat(s) 2025 · ${s.actes26.length} 2026</span></div></div>
+        <div class="taux-grid">
+          <div class="taux-card">
+            <div class="taux-head"><span class="taux-title">Taux RDV → mandat</span><span class="taux-pct ${s.tauxRdv>=0.35?'ok':'warn'}">${Math.round(s.tauxRdv*100)}%</span></div>
+            <div class="taux-track"><div class="taux-fill" style="width:${Math.min(s.tauxRdv*100,100)}%;background:var(--green)"></div></div>
+            <div class="taux-detail">${_mandats.length} mandats / ${_rdv} RDV</div>
+          </div>
+          <div class="taux-card">
+            <div class="taux-head"><span class="taux-title">Taux mandat → vente</span><span class="taux-pct ${s.tauxTransfo>=0.5?'ok':'warn'}">${Math.round(s.tauxTransfo*100)}%</span></div>
+            <div class="taux-track"><div class="taux-fill" style="width:${Math.min(s.tauxTransfo*100,100)}%;background:var(--amber)"></div></div>
+            <div class="taux-detail">${_compromis.length} ventes / ${_mandats.length} mandats</div>
+          </div>
+          <div class="taux-card">
+            <div class="taux-head"><span class="taux-title">Mandats pris (obj. ${_cfg.objectif_mandats||36}/an)</span><span class="taux-pct ${avMand>=40?'ok':'warn'}">${avMand}%</span></div>
+            <div class="taux-track"><div class="taux-fill" style="width:${Math.min(avMand,100)}%;background:var(--text)"></div></div>
+            <div class="taux-detail">${_mandats.length} pris · Proj. ${Math.round(me>0?_mandats.length/me*12:0)}/an</div>
+          </div>
         </div>
-        <p class="section-title">Commissions négo HT — actes par mois</p>
-        <div class="chart-card"><div class="bar-chart">${bars}</div></div>`
-    }
-
-    // ── SAISIE ──
-    const renderSaisie = () => {
-      const moisOpts=MONTHS.map(m=>`<option>${m}</option>`).join('')
-      return `<div class="form-card">
-        <div class="form-title">Nouveau mandat</div>
-        <div class="form-grid">
-          <div class="form-group"><label class="form-label">Adresse</label><input class="form-input" id="f-adresse" placeholder="12 rue des Lilas"/></div>
-          <div class="form-group"><label class="form-label">Ville</label><input class="form-input" id="f-ville" placeholder="LORIENT"/></div>
-          <div class="form-group"><label class="form-label">Type de bien</label><select class="form-select" id="f-type"><option>Maison</option><option>Appartement</option><option>Terrain</option><option>Autre</option></select></div>
-          <div class="form-group"><label class="form-label">Type de mandat</label><select class="form-select" id="f-mandat"><option>Exclusif</option><option>Simple</option></select></div>
-          <div class="form-group"><label class="form-label">Mois</label><select class="form-select" id="f-mois">${moisOpts}</select></div>
-          <div class="form-group"><label class="form-label">Origine RDV</label><select class="form-select" id="f-origine"><option>Prospection terrain</option><option>Prospection ciblée</option><option>Bouche-à-oreille</option><option>Réseau / partenaire</option><option>Notoriété agence</option><option>Acquéreur</option><option>Autre</option></select></div>
-          <div class="form-group"><label class="form-label">Prix mandat (€)</label><input class="form-input" id="f-prix" type="number" placeholder="350000"/></div>
-          <div class="form-group"><label class="form-label">Honoraires latents TTC (€)</label><input class="form-input" id="f-honTTC" type="number" placeholder="15000"/></div>
-          <div class="form-group"><label class="form-label">Honoraires latents HT (auto)</label><input class="form-input" id="f-honHT" type="number" readonly style="background:#f1efe8;color:var(--c-muted)"/></div>
-          <div class="form-group"><label class="form-label">% Négociateur</label><input class="form-input" id="f-pct" type="number" placeholder="22"/></div>
-          <div class="form-group"><label class="form-label">Comm. Négo HT (auto)</label><input class="form-input" id="f-commHT" type="number" readonly style="background:#f1efe8;color:var(--c-muted)"/></div>
-          <div class="form-group"><label class="form-label">Comm. Négo TTC (auto)</label><input class="form-input" id="f-commTTC" type="number" readonly style="background:#f1efe8;color:var(--c-muted)"/></div>
-          <div class="form-group"><label class="form-label">Statut</label><select class="form-select" id="f-statut"><option>En cours</option><option>Compromis signé</option><option>Acte signé</option><option>Perdu</option></select></div>
-          <div class="form-group"><label class="form-label">Prix de vente (€)</label><input class="form-input" id="f-prixVente" type="number" placeholder="si compromis ou acte"/></div>
-          <div class="form-group"><label class="form-label">Date compromis</label><input class="form-input" id="f-dateComp" type="date"/></div>
-          <div class="form-group"><label class="form-label">Date acte authentique</label><input class="form-input" id="f-dateActe" type="date"/></div>
-          <div class="form-group"><label class="form-label">Mandat 2025 ?</label><select class="form-select" id="f-is2025"><option value="false">Non — 2026</option><option value="true">Oui — 2025</option></select></div>
+        <div class="chart-wrap">
+          <div class="section-label" style="margin:0 0 4px">CA négociateur HT · par mois</div>
+          <div class="bar-chart">${bars}</div>
         </div>
-        <div class="form-actions">
-          <button class="btn btn-primary" id="btn-save-mandat">Enregistrer</button>
-          <button class="btn btn-secondary" id="btn-reset-form">Effacer</button>
-        </div></div>`
-    }
-
-    // ── MANDATS ──
-    const renderMandats = () => {
-      if(!_mandats.length) return `<div class="table-wrap"><div class="empty-state"><div class="empty-state-icon" style="font-size:32px">📋</div><div class="empty-state-text">Aucun mandat. Utilisez l'onglet Saisie.</div></div></div>`
-      const rows=_mandats.map(m=>{
-        const mB=m.type_mandat==='Exclusif'?'badge-excl':'badge-simple'
-        const sB={'Compromis signé':'badge-comp','Acte signé':'badge-acte','Perdu':'badge-perdu'}[m.statut]||'badge-cours'
-        const l25=m.is_2025?'<span class="badge badge-2025">2025</span>':''
-        const del=!m.is_2025?`<button class="btn-icon btn-del" data-id="${m.id}">✕</button>`:''
-        return `<div class="table-row ${m.is_2025?'is2025':''}">
-          <span class="td">${m.adresse||'—'}${l25}</span>
-          <span class="td td-muted">${m.type_bien||'—'}</span>
-          <span class="td"><span class="badge ${mB}">${m.type_mandat}</span></span>
-          <span class="td td-mono">${m.hon_ht?fmtN(Math.round(m.hon_ht))+' €':'—'}</span>
-          <span class="td td-mono" style="color:var(--c-accent)">${m.comm_nego_ht?fmtN(Math.round(m.comm_nego_ht))+' €':'—'}</span>
-          <span class="td"><span class="badge ${sB}">${m.statut||'—'}</span></span>
-          <span class="td td-action">${del}</span></div>`}).join('')
-      return `<div class="table-wrap">
-        <div class="table-toolbar"><span class="table-count">${_mandats.length} mandat(s)</span></div>
-        <div class="table-head"><span class="th">Adresse</span><span class="th">Type</span><span class="th">Mandat</span><span class="th">Hon. HT</span><span class="th">Comm. HT</span><span class="th">Statut</span><span class="th"></span></div>
-        <div class="table-body">${rows}</div></div>`
-    }
-
-    // ── RÉMUNÉRATION ──
-    const renderRemuneration = s => {
-      const months=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc']
-      const mkR=(arr,isAmt)=>arr.map((v,i)=>!v?'':
-        `<div class="recap-row"><span class="recap-month">${months[i]}</span><span class="recap-val">${isAmt?fmt(Math.round(v)):v}</span></div>`).join('')||'<p class="recap-empty">Aucune donnée</p>'
-      return `
-        <div class="kpi-grid">
-          <div class="kpi-card"><div class="kpi-label">Comm. Négo HT (actes)</div><div class="kpi-value kpi-ok">${fmt(Math.round(s.totalCommHT))}</div><div class="kpi-sub">mandats 2025 inclus</div></div>
-          <div class="kpi-card"><div class="kpi-label">Comm. Négo TTC</div><div class="kpi-value kpi-neutral">${fmt(Math.round(s.totalCommTTC))}</div><div class="kpi-sub">× 1,20</div></div>
-          <div class="kpi-card"><div class="kpi-label">En attente (compromis)</div><div class="kpi-value kpi-warn">${fmt(Math.round(s.pipelineComm))}</div><div class="kpi-sub">${s.pipeline.length} compromis sans acte</div></div>
-          <div class="kpi-card"><div class="kpi-label">Projection annuelle</div><div class="kpi-value kpi-ok">${fmt(Math.round(s.projCA))}</div><div class="kpi-sub">au rythme actuel</div></div>
-        </div>
-        <p class="section-title">Récapitulatif mensuel</p>
-        <div class="recap-grid">
-          <div class="recap-card"><div class="recap-head">Compromis / mois</div>${mkR(s.compParMois,false)}</div>
-          <div class="recap-card"><div class="recap-head">Actes / mois</div>${mkR(s.actesParMois,false)}</div>
-          <div class="recap-card"><div class="recap-head">Comm. HT / mois</div>${mkR(s.commActeParMois,true)}</div>
+        <div class="form-card" style="padding:16px 18px">
+          <div class="section-label" style="margin:0 0 10px">Indicateurs de prospection (cumul annuel)</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Nombre de RDV propriétaires</label>
+              <input class="form-input" type="number" id="inp-rdv" value="${_rdv||''}" placeholder="ex: 25"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nombre de visites acquéreurs</label>
+              <input class="form-input" type="number" id="inp-visites" value="${_visites||''}" placeholder="ex: 65"/>
+            </div>
+          </div>
+          <div class="form-actions"><button class="btn-p" id="btn-save-rdv">Enregistrer</button></div>
         </div>`
     }
 
-    // ── BIND EVENTS ──
-    const bindPageEvents = s => {
-      // Saisie
-      const honTTC=document.getElementById('f-honTTC'), pct=document.getElementById('f-pct')
-      if(honTTC) honTTC.oninput = () => {
-        const ht=(parseFloat(honTTC.value)||0)/1.20, p=parseFloat(pct?.value)||0
-        const cHT=ht*p/100
-        document.getElementById('f-honHT').value=ht?ht.toFixed(2):''
-        document.getElementById('f-commHT').value=cHT?cHT.toFixed(2):''
-        document.getElementById('f-commTTC').value=cHT?(cHT*1.20).toFixed(2):''
+    /* ── MANDATS ── */
+    const renderMandats=()=>{
+      const rows=_mandats.map(m=>{
+        const mB=m.type_mandat==='Exclusif'?'b-excl':'b-simp'
+        const sB={'Compromis signé':'b-comp','Acte signé':'b-acte','Perdu':'b-perdu'}[m.statut]||'b-cours'
+        return`<div class="row-m">
+          <span class="td">${m.adresse||'—'}</span>
+          <span class="td td-mu">${m.type_bien||'—'}</span>
+          <span class="td"><span class="badge ${mB}">${m.type_mandat}</span></span>
+          <span class="td td-m">${m.hon_ht?fmtN(Math.round(m.hon_ht))+' €':'—'}</span>
+          <span class="td"><span class="badge ${sB}">${m.statut||'En cours'}</span></span>
+          <span class="td td-act"><button class="btn-del" data-del-m="${m.id}">✕</button></span>
+        </div>`}).join('')
+      return`
+        <div class="page-title">Mandats</div>
+        <div class="page-sub">Saisie des mandats rentrés</div>
+        <div class="form-card">
+          <div class="form-title">Nouveau mandat</div>
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">Adresse</label><input class="form-input" id="m-adr" placeholder="12 rue des Lilas"/></div>
+            <div class="form-group"><label class="form-label">Ville</label><input class="form-input" id="m-vil" placeholder="LORIENT"/></div>
+            <div class="form-group"><label class="form-label">Type de bien</label><select class="form-select" id="m-type"><option>Maison</option><option>Appartement</option><option>Terrain</option><option>Autre</option></select></div>
+            <div class="form-group"><label class="form-label">Type de mandat</label><select class="form-select" id="m-mandat"><option>Exclusif</option><option>Simple</option></select></div>
+            <div class="form-group"><label class="form-label">Mois</label><select class="form-select" id="m-mois">${MS.map(m=>`<option>${m}</option>`).join('')}</select></div>
+            <div class="form-group"><label class="form-label">Origine RDV</label><select class="form-select" id="m-orig"><option>Prospection terrain</option><option>Prospection ciblée</option><option>Bouche-à-oreille</option><option>Réseau / partenaire</option><option>Notoriété agence</option><option>Acquéreur</option><option>Autre</option></select></div>
+            <div class="form-group"><label class="form-label">Prix net vendeur (€)</label><input class="form-input" id="m-pnv" type="number" placeholder="350 000"/></div>
+            <div class="form-group"><label class="form-label">Honoraires TTC (€)</label><input class="form-input" id="m-hon-ttc" type="number" placeholder="15 000"/></div>
+            <div class="form-group"><label class="form-label">Honoraires HT (auto)</label><input class="form-input auto" id="m-hon-ht" type="number" readonly placeholder="calculé"/></div>
+            <div class="form-group"><label class="form-label">Statut</label><select class="form-select" id="m-statut"><option>En cours</option><option>Compromis signé</option><option>Acte signé</option><option>Perdu</option></select></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn-p" id="btn-save-m">Enregistrer le mandat</button>
+            <button class="btn-s" id="btn-reset-m">Effacer</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <div class="table-toolbar"><span class="table-count">${_mandats.length} mandat(s)</span></div>
+          <div class="t-head-m"><span class="th">Adresse</span><span class="th">Type</span><span class="th">Mandat</span><span class="th">Hon. HT</span><span class="th">Statut</span><span class="th"></span></div>
+          <div class="table-body">${rows||'<div class="empty-st">Aucun mandat saisi.</div>'}</div>
+        </div>`
+    }
+
+    /* ── COMPROMIS ── */
+    const renderCompromis=()=>{
+      const mandatOpts=_mandats.map(m=>`<option value="${m.id}">${m.adresse||'—'} · ${m.ville||''}</option>`).join('')
+      const rows=_compromis.map(c=>{
+        const d=c.date_compromis?new Date(c.date_compromis).toLocaleDateString('fr-FR'):''
+        return`<div class="row-c">
+          <span class="td">${c.adresse_libre||c.adresse_mandat||'—'}</span>
+          <span class="td td-mu">${d}</span>
+          <span class="td td-m">${c.hon_ht_reel?fmtN(Math.round(c.hon_ht_reel))+' €':'—'}</span>
+          <span class="td td-m">${c.pct_nego?c.pct_nego+'%':'—'}</span>
+          <span class="td td-g">${c.ca_nego_ht?fmt(Math.round(c.ca_nego_ht)):'—'}</span>
+          <span class="td td-m">${c.unite_vente||'—'}</span>
+          <span class="td td-act"><button class="btn-del" data-del-c="${c.id}">✕</button></span>
+        </div>`}).join('')
+      return`
+        <div class="page-title">Compromis</div>
+        <div class="page-sub">Saisie des compromis signés · indépendante des mandats</div>
+        <div class="form-card">
+          <div class="form-title">Nouveau compromis</div>
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">Lier à un mandat existant</label>
+              <select class="form-select" id="c-mandat-id">
+                <option value="">— Saisie libre —</option>
+                ${mandatOpts}
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label">Adresse (si saisie libre)</label><input class="form-input" id="c-adr" placeholder="12 rue des Lilas"/></div>
+            <div class="form-group"><label class="form-label">Date du compromis</label><input class="form-input" id="c-date" type="date"/></div>
+            <div class="form-group"><label class="form-label">Unité de vente</label>
+              <select class="form-select" id="c-uv">
+                <option value="1">1 — entrée ET sortie</option>
+                <option value="0.5">0,5 — entrée OU sortie seulement</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label">Honoraires réels TTC (€)</label><input class="form-input" id="c-hon-ttc" type="number" placeholder="15 000"/></div>
+            <div class="form-group"><label class="form-label">Honoraires réels HT (auto)</label><input class="form-input auto" id="c-hon-ht" type="number" readonly placeholder="calculé"/></div>
+            <div class="form-group"><label class="form-label">% Commission négociateur</label><input class="form-input" id="c-pct" type="number" placeholder="ex: 22"/></div>
+            <div class="form-group"><label class="form-label">CA négociateur HT (auto)</label><input class="form-input highlight" id="c-ca" type="number" readonly placeholder="calculé"/></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn-p" id="btn-save-c">Enregistrer le compromis</button>
+            <button class="btn-s" id="btn-reset-c">Effacer</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <div class="table-toolbar"><span class="table-count">${_compromis.length} compromis · ${_compromis.reduce((s,c)=>s+(+c.unite_vente||0),0)} UV · ${fmt(Math.round(_compromis.reduce((s,c)=>s+(+c.ca_nego_ht||0),0)))} CA HT</span></div>
+          <div class="t-head-c"><span class="th">Adresse</span><span class="th">Date</span><span class="th">Hon. HT</span><span class="th">% Négo</span><span class="th">CA Négo HT</span><span class="th">UV</span><span class="th"></span></div>
+          <div class="table-body">${rows||'<div class="empty-st">Aucun compromis saisi.</div>'}</div>
+        </div>`
+    }
+
+    /* ── RÉMUNÉRATION ── */
+    const renderRemu=()=>{
+      const s=computeStats()
+      const me=_cfg.mois_ecoules||3.6
+      const mkR=(arr,isAmt)=>arr.map((v,i)=>!v?'':
+        `<div class="recap-row"><span class="recap-m">${MSH[i]}</span><span class="recap-v">${isAmt?fmt(Math.round(v)):v}</span></div>`).join('')||'<p class="recap-empty">Aucune donnée</p>'
+      return`
+        <div class="page-title">Rémunération</div>
+        <div class="page-sub">Commissions négociateur · encaissé et projection</div>
+        <div class="kpi-grid">
+          <div class="kpi-card"><div class="kpi-label">CA Négo HT total</div><div class="kpi-value ok">${fmt(Math.round(s.totalCA))}</div><div class="kpi-sub">${s.totalUV} unités de vente</div></div>
+          <div class="kpi-card"><div class="kpi-label">Panier moyen / UV</div><div class="kpi-value neu">${s.totalUV?fmt(Math.round(s.panier)):'—'}</div><div class="kpi-sub">CA HT / unité</div></div>
+          <div class="kpi-card"><div class="kpi-label">Projection annuelle</div><div class="kpi-value ok">${fmt(Math.round(s.projCA))}</div><div class="kpi-sub">au rythme actuel</div></div>
+          <div class="kpi-card"><div class="kpi-label">Avancement obj. officiel</div><div class="kpi-value ${s.avCA>=0.5?'ok':'warn'}">${Math.round(s.avCA*100)}%</div><div class="kpi-sub">${fmt(_cfg.objectif_ca||160000)}</div></div>
+        </div>
+        <div class="section-label">Récapitulatif mensuel</div>
+        <div class="recap-grid">
+          <div class="recap-card"><div class="recap-head">Compromis / mois</div>${mkR(s.compParMois,false)}</div>
+          <div class="recap-card"><div class="recap-head">Unités de vente / mois</div>${mkR(s.uvParMois,false)}</div>
+          <div class="recap-card"><div class="recap-head">CA Négo HT / mois</div>${mkR(s.caParMois,true)}</div>
+        </div>
+        <div class="section-label">Projection annuelle</div>
+        <div class="proj-grid">
+          <div class="proj-cell"><div class="proj-lbl">Au rythme actuel</div><div class="proj-val ok">${fmt(Math.round(s.projCA))}</div></div>
+          <div class="proj-cell"><div class="proj-lbl">Écart obj. officiel</div><div class="proj-val ${s.projCA>=(_cfg.objectif_ca||160000)?'ok':'bad'}">${fmt(Math.round(s.projCA-(_cfg.objectif_ca||160000)))}</div></div>
+          <div class="proj-cell"><div class="proj-lbl">Écart obj. officieux</div><div class="proj-val ${s.projCA>=(_cfg.objectif_ca_off||200000)?'ok':'warn'}">${fmt(Math.round(s.projCA-(_cfg.objectif_ca_off||200000)))}</div></div>
+        </div>`
+    }
+
+    /* ── EVENTS ── */
+    const bindEvents=()=>{
+      // Dashboard — RDV / visites
+      const btnRdv=document.getElementById('btn-save-rdv')
+      if(btnRdv) btnRdv.onclick=()=>{
+        _rdv=parseInt(document.getElementById('inp-rdv')?.value)||0
+        _visites=parseInt(document.getElementById('inp-visites')?.value)||0
+        localStorage.setItem('ni_rdv',_rdv); localStorage.setItem('ni_vis',_visites)
+        toast('Indicateurs sauvegardés !'); render()
       }
-      if(pct) pct.oninput = () => honTTC?.dispatchEvent(new Event('input'))
-      const btnSave=document.getElementById('btn-save-mandat')
-      if(btnSave) btnSave.onclick = async() => {
+
+      // Mandats — auto HT
+      const mHonTTC=document.getElementById('m-hon-ttc')
+      if(mHonTTC) mHonTTC.oninput=()=>{
+        const ht=(parseFloat(mHonTTC.value)||0)/1.20
+        const el=document.getElementById('m-hon-ht'); if(el)el.value=ht?ht.toFixed(2):''
+      }
+      // Mandats — save
+      const btnSM=document.getElementById('btn-save-m')
+      if(btnSM) btnSM.onclick=async()=>{
         const g=id=>document.getElementById(id)?.value?.trim()||''
         const gf=id=>parseFloat(document.getElementById(id)?.value)||0
-        try {
-          await addMandatDB({adresse:g('f-adresse')||'—',ville:g('f-ville')||'—',type_bien:g('f-type'),type_mandat:g('f-mandat'),mois:g('f-mois'),origine_rdv:g('f-origine'),prix_mandat:gf('f-prix'),hon_ttc:gf('f-honTTC'),pct_nego:gf('f-pct'),statut:g('f-statut'),prix_vente:gf('f-prixVente')||null,date_compromis:g('f-dateComp')||null,date_acte:g('f-dateActe')||null,is_2025:g('f-is2025')==='true'})
-          showToast('Mandat enregistré !'); _mandats=await getMandats(); render()
-        } catch(e){ showToast('Erreur : '+e.message) }
+        try{
+          await addMandat({adresse:g('m-adr')||'—',ville:g('m-vil')||'—',type_bien:g('m-type'),type_mandat:g('m-mandat'),mois:g('m-mois'),origine_rdv:g('m-orig'),prix_net_vendeur:gf('m-pnv')||null,hon_ttc:gf('m-hon-ttc')||null,statut:g('m-statut')})
+          toast('Mandat enregistré !');_mandats=await getMan();render()
+        }catch(e){toast('Erreur : '+e.message)}
       }
-      const btnReset=document.getElementById('btn-reset-form')
-      if(btnReset) btnReset.onclick=()=>['f-adresse','f-ville','f-prix','f-honTTC','f-honHT','f-pct','f-commHT','f-commTTC','f-prixVente','f-dateComp','f-dateActe'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''})
+      const btnRM=document.getElementById('btn-reset-m')
+      if(btnRM) btnRM.onclick=()=>['m-adr','m-vil','m-pnv','m-hon-ttc','m-hon-ht'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''})
+
+      // Compromis — auto HT + CA
+      const cHon=document.getElementById('c-hon-ttc'), cPct=document.getElementById('c-pct')
+      const updateCa=()=>{
+        const ht=(parseFloat(cHon?.value)||0)/1.20
+        const p=parseFloat(cPct?.value)||0
+        const ca=ht*p/100
+        const elHT=document.getElementById('c-hon-ht'); if(elHT)elHT.value=ht?ht.toFixed(2):''
+        const elCA=document.getElementById('c-ca'); if(elCA)elCA.value=ca?ca.toFixed(2):''
+      }
+      if(cHon) cHon.oninput=updateCa
+      if(cPct) cPct.oninput=updateCa
+
+      // Compromis — mandat sélectionné → pré-remplir adresse
+      const cMan=document.getElementById('c-mandat-id')
+      if(cMan) cMan.onchange=()=>{
+        const m=_mandats.find(m=>m.id===cMan.value)
+        const elAdr=document.getElementById('c-adr')
+        if(m&&elAdr){elAdr.value=m.adresse+(m.ville?' · '+m.ville:'');elAdr.disabled=true}
+        else if(elAdr){elAdr.value='';elAdr.disabled=false}
+      }
+
+      // Compromis — save
+      const btnSC=document.getElementById('btn-save-c')
+      if(btnSC) btnSC.onclick=async()=>{
+        const g=id=>document.getElementById(id)?.value?.trim()||''
+        const gf=id=>parseFloat(document.getElementById(id)?.value)||0
+        const mandatId=g('c-mandat-id')
+        const mandat=_mandats.find(m=>m.id===mandatId)
+        try{
+          await addCompromis({
+            mandat_id:mandatId||null,
+            adresse_mandat:mandat?.adresse||null,
+            adresse_libre:!mandatId?g('c-adr')||null:null,
+            date_compromis:g('c-date')||null,
+            unite_vente:parseFloat(g('c-uv'))||1,
+            hon_ttc_reel:gf('c-hon-ttc')||null,
+            pct_nego:gf('c-pct')||null,
+          })
+          toast('Compromis enregistré !');_compromis=await getCom();render()
+        }catch(e){toast('Erreur : '+e.message)}
+      }
+      const btnRC=document.getElementById('btn-reset-c')
+      if(btnRC) btnRC.onclick=()=>{
+        ['c-hon-ttc','c-hon-ht','c-pct','c-ca','c-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''})
+        const elAdr=document.getElementById('c-adr');if(elAdr){elAdr.value='';elAdr.disabled=false}
+        const elMan=document.getElementById('c-mandat-id');if(elMan)elMan.value=''
+      }
+
       // Supprimer mandat
-      document.querySelectorAll('.btn-del').forEach(b=>b.onclick=async()=>{
+      document.querySelectorAll('[data-del-m]').forEach(b=>b.onclick=async()=>{
         if(!confirm('Supprimer ce mandat ?'))return
-        try{await deleteMandatDB(b.dataset.id);showToast('Supprimé');_mandats=await getMandats();render()}catch(e){showToast('Erreur : '+e.message)}
+        try{await delMandat(b.dataset.delM);toast('Supprimé');_mandats=await getMan();render()}catch(e){toast('Erreur')}
+      })
+      // Supprimer compromis
+      document.querySelectorAll('[data-del-c]').forEach(b=>b.onclick=async()=>{
+        if(!confirm('Supprimer ce compromis ?'))return
+        try{await delCompromis(b.dataset.delC);toast('Supprimé');_compromis=await getCom();render()}catch(e){toast('Erreur')}
       })
     }
 
-    // ── INIT ──
-    const init = async () => {
-      _user = await getUser()
-      if(!_user){ renderLogin(); return }
-      ;[_mandats,_config] = await Promise.all([getMandats(),getConfig()])
+    /* ── INIT ── */
+    const init=async()=>{
+      _user=await getUser()
+      if(!_user){renderLogin();return}
+      _rdv=parseInt(localStorage.getItem('ni_rdv')||'0')
+      _visites=parseInt(localStorage.getItem('ni_vis')||'0')
+      ;[_mandats,_compromis,_cfg]=await Promise.all([getMan(),getCom(),getCfg()])
       render()
     }
-
     init()
   </script>
 </body>
