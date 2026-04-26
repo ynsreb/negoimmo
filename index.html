@@ -307,10 +307,10 @@
     const remuPrevParMois=Array(12).fill(0)
     pipeline.forEach(c=>{
       const m=mnC(c.date_prev_acte)  // mois comptable (cycle 22→22)
-      if(m){remuPrevParMois[m-1]+=(+c.ca_nego_ht||0);honPrevParMois[m-1]+=(+c.hon_ht_reel||0)}
+      if(m){remuPrevParMois[m-1]+=(+c.ca_nego_ht||0);honPrevParMois[m-1]+=(+c.hon_ht_uv||0)}
     })
 
-    const totalHonActesPrev=pipeline.reduce((s,c)=>s+(+c.hon_ht_reel||0),0)
+    const totalHonActesPrev=pipeline.reduce((s,c)=>s+(+c.hon_ht_uv||0),0)
     return{excl,tauxExcl,tauxRdv,tauxTransfo,totalCA,totalUV,totalRemu,totalHonActes,panier,projCA,avCA,
       caParMois,remuParMois,honActesParMois,compParMois,uvParMois,
       totalRemuAA,totalRemuPrev,remuAAParMois,remuPrevParMois,honPrevParMois,totalHonActesPrev,pipeline}
