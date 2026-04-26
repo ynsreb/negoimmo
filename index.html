@@ -221,11 +221,11 @@
   const delMandat = async id=>{const{error}=await sb.from('mandats').delete().eq('id',id);if(error)throw error}
 
   const addCompromis = async c=>{
-    const hon_ht=c.hon_ttc_reel?c.hon_ttc_reel/1.20:null
-    // CA HT agence = honoraires HT × UV
+    const hon_ht=c.hon_ttc_reel?c.hon_ttc_reel/1.20:null  // honoraires HT bruts
     const uv=parseFloat(c.unite_vente)||0
-    const ca_nego_ht=hon_ht?hon_ht*uv:null
-    const{data,error}=await sb.from('compromis').insert({user_id:_user.id,...c,hon_ht_reel:hon_ht,ca_nego_ht}).select().single()
+    const hon_ht_uv=hon_ht?hon_ht*uv:null                  // honoraires HT × UV = CA agence
+    const ca_nego_ht=hon_ht&&c.pct_nego?hon_ht*c.pct_nego/100:null  // rémunération = hon HT brut × %
+    const{data,error}=await sb.from('compromis').insert({user_id:_user.id,...c,hon_ht_reel:hon_ht,hon_ht_uv,ca_nego_ht}).select().single()
     if(error)throw error;return data
   }
   const updateCompromis = async(id,updates)=>{
@@ -251,20 +251,17 @@
     const tauxRdv=_rdv&&_mandats.length?_mandats.length/_rdv:0
     const tauxTransfo=_mandats.length&&_compromis.length?_compromis.length/_mandats.length:0
 
-    // CA HT agence = somme des (honoraires HT × UV) de tous les compromis
-    const totalCA=_compromis.reduce((s,c)=>s+(+c.ca_nego_ht||0),0)
-    // UV total
+    // CA HT agence = hon_ttc / 1.2 × UV
+    const totalCA=_compromis.reduce((s,c)=>s+(+c.hon_ht_uv||0),0)
+    // UV total (hors participation à 0)
     const totalUV=_compromis.reduce((s,c)=>s+(+c.unite_vente||0),0)
-    // Rémunération négociateur HT = CA HT × % commission
-    const totalRemu=_compromis.reduce((s,c)=>{
-      const caht=+c.ca_nego_ht||0
-      return s+(c.pct_nego?caht*c.pct_nego/100:0)
-    },0)
+    // Rémunération négociateur HT = honoraires HT bruts × % commission
+    const totalRemu=_compromis.reduce((s,c)=>s+(+c.ca_nego_ht||0),0)
     // Honoraires actes authentiques HT
     const totalHonActes=_actes.reduce((s,a)=>s+(+a.hon_ht_acte||0),0)
     // Honoraires actes authentiques
     // Panier moyen = CA HT / UV
-    const panier=totalUV?totalCA/totalUV:0
+    const panier=totalUV?totalCA/totalUV:0  // CA HT (hon_ht × UV) / UV
     const me=_cfg.mois_ecoules||3.6
     const projCA=me>0?totalCA/me*12:0
     const avCA=totalCA/(_cfg.objectif_ca||160000)
@@ -278,9 +275,8 @@
     _compromis.forEach(c=>{
       const m=mn(c.date_compromis)
       if(m){
-        const caht=+c.ca_nego_ht||0
-        caParMois[m-1]+=caht
-        remuParMois[m-1]+=(c.pct_nego?caht*c.pct_nego/100:0)
+        caParMois[m-1]+=(+c.hon_ht_uv||0)       // CA HT = hon_ht × UV
+        remuParMois[m-1]+=(+c.ca_nego_ht||0)     // rémunération = hon HT brut × %
         compParMois[m-1]++
         uvParMois[m-1]+=(+c.unite_vente||0)
       }
@@ -335,9 +331,9 @@
     const calcModal=()=>{
       const ht=(parseFloat(document.getElementById('ec-hon-ttc')?.value)||0)/1.20
       const uv=parseFloat(document.getElementById('ec-uv')?.value)||0
-      const ca=ht*uv
+      const honHtUv=ht*uv
       const eh=document.getElementById('ec-hon-ht');if(eh)eh.value=ht?ht.toFixed(2):''
-      const ec2=document.getElementById('ec-ca');if(ec2)ec2.value=ca?ca.toFixed(2):''
+      const ec2=document.getElementById('ec-ca');if(ec2)ec2.value=honHtUv?honHtUv.toFixed(2):''
     }
     document.getElementById('ec-hon-ttc').oninput=calcModal
     document.getElementById('ec-uv').onchange=calcModal
@@ -352,10 +348,13 @@
       const uv=parseFloat(g('ec-uv'))||0
       const caNego=honHT2?honHT2*uv:null
       try{
+        const honHtUv2=honHT2?honHT2*uv:null
+        const remuNego=honHT2&&gf('ec-pct')?honHT2*gf('ec-pct')/100:null  // hon HT brut × %
         await updateCompromis(id,{
           adresse_libre:g('ec-adr')||null,ville:g('ec-vil')||null,
           date_compromis:g('ec-date')||null,unite_vente:uv,
-          hon_ttc_reel:honTTC||null,hon_ht_reel:honHT2,ca_nego_ht:caNego,
+          hon_ttc_reel:honTTC||null,hon_ht_reel:honHT2,
+          hon_ht_uv:honHtUv2,ca_nego_ht:remuNego,
           pct_nego:gf('ec-pct')||null
         })
         toast('Compromis mis à jour !');_compromis=await getCom();closeModal();render()
@@ -465,8 +464,8 @@
       <div class="page-sub">${me} mois écoulés · ${_cfg.annee||2026}</div>
 
       <div class="kpi-grid">
-        <div class="kpi-card"><div class="kpi-label">CA HT agence (compromis)</div><div class="kpi-value ${caCol}">${fmt(s.totalCA)}</div><div class="kpi-sub">hon. HT × UV · obj. ${fmt(_cfg.objectif_ca||160000)} · ${avPct}%</div></div>
-        <div class="kpi-card"><div class="kpi-label">Rémunération négociateur HT</div><div class="kpi-value ok">${fmt(s.totalRemu)}</div><div class="kpi-sub">CA HT × % commission · ${_compromis.length} compromis</div></div>
+        <div class="kpi-card"><div class="kpi-label">CA HT agence (compromis)</div><div class="kpi-value ${caCol}">${fmt(s.totalCA)}</div><div class="kpi-sub">Σ hon. HT × UV · obj. ${fmt(_cfg.objectif_ca||160000)} · ${avPct}%</div></div>
+        <div class="kpi-card"><div class="kpi-label">Rémunération négociateur HT</div><div class="kpi-value ok">${fmt(s.totalRemu)}</div><div class="kpi-sub">hon. HT brut × % commission · ${_compromis.length} compromis</div></div>
         <div class="kpi-card"><div class="kpi-label">Honoraires actes signés HT</div><div class="kpi-value neu">${fmt(s.totalHonActes)}</div><div class="kpi-sub">${_actes.length} acte(s) authentique(s)</div></div>
         <div class="kpi-card"><div class="kpi-label">Panier moyen / UV</div><div class="kpi-value neu">${s.totalUV?fmt(s.panier):'—'}</div><div class="kpi-sub">CA HT ÷ ${s.totalUV} UV</div></div>
       </div>
@@ -592,7 +591,7 @@
         <span class="td">${c.adresse_libre||c.adresse_mandat||'—'}</span>
         <span class="td td-mu">${c.ville||'—'}</span>
         <span class="td td-mu">${d}</span>
-        <span class="td td-m">${c.hon_ht_reel?fmtN(Math.round(c.hon_ht_reel))+' €':'—'}</span>
+        <span class="td td-m">${c.hon_ht_uv!=null?fmtN(Math.round(c.hon_ht_uv))+' €':'—'}</span>
         <span class="td td-m">${c.pct_nego?c.pct_nego+'%':'—'}</span>
         <span class="td td-g">${c.ca_nego_ht?fmt(Math.round(c.ca_nego_ht)):'—'}</span>
         <span class="td td-act">
@@ -620,7 +619,7 @@
             </select></div>
           <div class="form-group"><label class="form-label">Honoraires réels TTC (€)</label><input class="form-input" id="c-hon-ttc" type="number" placeholder="15 000"/></div>
           <div class="form-group"><label class="form-label">Honoraires réels HT (auto)</label><input class="form-input auto" id="c-hon-ht" type="number" readonly placeholder="calculé"/></div>
-          <div class="form-group"><label class="form-label">CA HT agence (auto = Hon. HT × UV)</label><input class="form-input hi" id="c-ca" type="number" readonly placeholder="hon. HT × UV"/></div>
+          <div class="form-group"><label class="form-label">Hon. HT × UV (entre dans votre CA)</label><input class="form-input hi" id="c-ca" type="number" readonly placeholder="hon. HT × UV"/></div>
           <div class="form-group"><label class="form-label">% Commission négociateur</label><input class="form-input" id="c-pct" type="number" placeholder="ex: 22"/></div>
           <div class="form-group"><label class="form-label">Rémunération négo HT (auto = CA HT × %)</label><input class="form-input" id="c-remu" type="number" readonly style="background:rgba(251,191,36,0.06);color:var(--amber);border-color:rgba(251,191,36,0.2)" placeholder="CA HT × % commission"/></div>
         </div>
@@ -631,7 +630,7 @@
       </div>
       <div class="table-wrap">
         <div class="table-toolbar"><span class="table-count">${_compromis.length} compromis · ${_compromis.reduce((s,c)=>s+(+c.unite_vente||0),0)} UV · ${fmt(Math.round(_compromis.reduce((s,c)=>s+(+c.ca_nego_ht||0),0)))} CA HT</span></div>
-        <div class="t-head-c"><span class="th">Adresse</span><span class="th">Ville</span><span class="th">Date</span><span class="th">Hon. HT</span><span class="th">% Négo</span><span class="th">CA HT</span><span class="th"></span></div>
+        <div class="t-head-c"><span class="th">Adresse</span><span class="th">Ville</span><span class="th">Date</span><span class="th">Hon. HT × UV</span><span class="th">% Négo</span><span class="th">Rémunération HT</span><span class="th"></span></div>
         <div class="table-body">${rows||'<div class="empty-st">Aucun compromis saisi.</div>'}</div>
       </div>`
   }
@@ -692,7 +691,7 @@
       <div class="page-sub">Suivi des commissions négociateur</div>
       <div class="kpi-grid">
         <div class="kpi-card"><div class="kpi-label">CA HT agence (compromis)</div><div class="kpi-value ok">${fmt(Math.round(s.totalCA))}</div><div class="kpi-sub">${s.totalUV} UV · ${_compromis.length} compromis</div></div>
-        <div class="kpi-card"><div class="kpi-label">Rémunération négociateur HT</div><div class="kpi-value warn">${fmt(Math.round(s.totalRemu))}</div><div class="kpi-sub">CA HT × % commission</div></div>
+        <div class="kpi-card"><div class="kpi-label">Rémunération négociateur HT</div><div class="kpi-value warn">${fmt(Math.round(s.totalRemu))}</div><div class="kpi-sub">hon. HT brut × % commission</div></div>
         <div class="kpi-card"><div class="kpi-label">Projection CA agence / an</div><div class="kpi-value neu">${fmt(Math.round(s.projCA))}</div><div class="kpi-sub">au rythme actuel</div></div>
         <div class="kpi-card"><div class="kpi-label">Avancement obj. officiel</div><div class="kpi-value ${s.avCA>=0.5?'ok':'warn'}">${Math.round(s.avCA*100)}%</div><div class="kpi-sub">${fmt(_cfg.objectif_ca||160000)}</div></div>
       </div>
@@ -782,12 +781,12 @@
     // Compromis auto-calc
     const cHon=document.getElementById('c-hon-ttc'),cPct=document.getElementById('c-pct')
     const calcCom=()=>{
-      const ht=(parseFloat(cHon?.value)||0)/1.20
+      const ht=(parseFloat(cHon?.value)||0)/1.20           // hon HT brut
       const uv=parseFloat(document.getElementById('c-uv')?.value)||0
-      const ca=ht*uv
-      const remu=ca*(parseFloat(cPct?.value)||0)/100
+      const honHtUv=ht*uv                                   // hon HT × UV = CA agence
+      const remu=ht*(parseFloat(cPct?.value)||0)/100        // rémunération = hon HT brut × %
       const eh=document.getElementById('c-hon-ht');if(eh)eh.value=ht?ht.toFixed(2):''
-      const ec=document.getElementById('c-ca');if(ec)ec.value=ca?ca.toFixed(2):''
+      const ec=document.getElementById('c-ca');if(ec)ec.value=honHtUv?honHtUv.toFixed(2):''
       const er=document.getElementById('c-remu');if(er)er.value=remu?remu.toFixed(2):''
     }
     if(cHon)cHon.oninput=calcCom;if(cPct)cPct.oninput=calcCom
