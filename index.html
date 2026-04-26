@@ -36,7 +36,7 @@
     .section-label{font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px}
 
     /* HERO STATS */
-    .hero-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+    .hero-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
     .hero-card{background:var(--surface);border:0.5px solid var(--border2);border-radius:10px;padding:16px 20px;display:flex;align-items:center;gap:16px}
     .hero-num{font-family:'DM Mono',monospace;font-size:36px;font-weight:500;line-height:1}
     .hero-info{}
@@ -64,6 +64,7 @@
 
     /* CHARTS */
     .charts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+    .progress-section{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
     .chart-wrap{background:var(--surface);border:0.5px solid var(--border2);border-radius:10px;padding:14px 16px}
     .chart-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px}
     .bar-chart{display:flex;align-items:flex-end;gap:3px;height:90px}
@@ -285,6 +286,8 @@
       const m=mn(a.date_acte)
       if(m){honActesParMois[m-1]+=(+a.hon_ht_acte||0)}
     })
+    // CA HT prévisionnel actes = hon_ht_reel des compromis avec date_prev_acte sans acte lié
+    const honPrevParMois=Array(12).fill(0)
 
     // Rémunération AA réelle (actes signés)
     const totalRemuAA=_actes.reduce((s,a)=>s+(+a.remu_nego_ht||0),0)
@@ -296,11 +299,15 @@
     const pipeline=_compromis.filter(c=>c.date_prev_acte&&!actesAdresses.has(c.id))
     const totalRemuPrev=pipeline.reduce((s,c)=>s+(+c.ca_nego_ht||0),0)
     const remuPrevParMois=Array(12).fill(0)
-    pipeline.forEach(c=>{const m=mn(c.date_prev_acte);if(m)remuPrevParMois[m-1]+=(+c.ca_nego_ht||0)})
+    pipeline.forEach(c=>{
+      const m=mn(c.date_prev_acte)
+      if(m){remuPrevParMois[m-1]+=(+c.ca_nego_ht||0);honPrevParMois[m-1]+=(+c.hon_ht_reel||0)}
+    })
 
+    const totalHonActesPrev=pipeline.reduce((s,c)=>s+(+c.hon_ht_reel||0),0)
     return{excl,tauxExcl,tauxRdv,tauxTransfo,totalCA,totalUV,totalRemu,totalHonActes,panier,projCA,avCA,
       caParMois,remuParMois,honActesParMois,compParMois,uvParMois,
-      totalRemuAA,totalRemuPrev,remuAAParMois,remuPrevParMois,pipeline}
+      totalRemuAA,totalRemuPrev,remuAAParMois,remuPrevParMois,honPrevParMois,totalHonActesPrev,pipeline}
   }
 
   const toast=(msg,dur=2500)=>{
@@ -780,15 +787,20 @@
       <div class="page-sub">Suivi des commissions négociateur</div>
       <div class="kpi-grid">
         <div class="kpi-card"><div class="kpi-label">CA HT agence (compromis)</div><div class="kpi-value ok">${fmt(Math.round(s.totalCA))}</div><div class="kpi-sub">${s.totalUV} UV · ${_compromis.length} compromis</div></div>
-        <div class="kpi-card"><div class="kpi-label">Rémunération négociateur HT</div><div class="kpi-value warn">${fmt(Math.round(s.totalRemu))}</div><div class="kpi-sub">hon. HT brut × % commission</div></div>
-        <div class="kpi-card"><div class="kpi-label">Projection CA agence / an</div><div class="kpi-value neu">${fmt(Math.round(s.projCA))}</div><div class="kpi-sub">au rythme actuel</div></div>
+        <div class="kpi-card"><div class="kpi-label">Rémunération totale compromis signés</div><div class="kpi-value warn">${fmt(Math.round(s.totalRemu))}</div><div class="kpi-sub">hon. HT brut × % commission</div></div>
+        <div class="kpi-card"><div class="kpi-label">Projection CA compromis signés</div><div class="kpi-value neu">${fmt(Math.round(s.projCA))}</div><div class="kpi-sub">au rythme actuel</div></div>
         <div class="kpi-card"><div class="kpi-label">Avancement obj. officiel</div><div class="kpi-value ${s.avCA>=0.5?'ok':'warn'}">${Math.round(s.avCA*100)}%</div><div class="kpi-sub">${fmt(_cfg.objectif_ca||160000)}</div></div>
       </div>
       <div class="section-label">Récapitulatif mensuel</div>
       <div class="recap-grid">
         <div class="recap-card"><div class="recap-head">Compromis / mois</div>${mkR(s.compParMois,false)}</div>
-        <div class="recap-card"><div class="recap-head">CA HT agence / mois</div>${mkR(s.caParMois,true)}</div>
-        <div class="recap-card"><div class="recap-head">Rémunération négo HT / mois</div>${mkR(s.remuParMois,true)}</div>
+        <div class="recap-card"><div class="recap-head">CA HT compromis signés / mois</div>${mkR(s.caParMois,true)}</div>
+        <div class="recap-card"><div class="recap-head">Rémunération totale compromis / mois</div>${mkR(s.remuParMois,true)}</div>
+      </div>
+      <div class="recap-grid">
+        <div class="recap-card"><div class="recap-head">Rémunération AA réalisée / mois</div>${mkR(s.remuAAParMois,true)}</div>
+        <div class="recap-card"><div class="recap-head">Rémunération AA prévisionnelle / mois</div>${mkR(s.remuPrevParMois,true)}</div>
+        <div class="recap-card"><div class="recap-head">CA HT actes / mois</div>${mkR(s.honActesParMois,true)}</div>
       </div>
       <div class="section-label">Projection annuelle</div>
       <div class="proj-grid">
