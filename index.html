@@ -123,8 +123,8 @@
     .row-m:hover{background:var(--surface2)}
 
     /* COMPROMIS TABLE */
-    .t-head-c{display:grid;grid-template-columns:1.8fr 1fr 1fr 1fr 1fr 1fr 0.6fr;padding:7px 14px;border-bottom:0.5px solid var(--border2)}
-    .row-c{display:grid;grid-template-columns:1.8fr 1fr 1fr 1fr 1fr 1fr 0.6fr;padding:9px 14px;border-bottom:0.5px solid var(--border);align-items:center;transition:background 0.1s}
+    .t-head-c{display:grid;grid-template-columns:1.8fr 1fr 1fr 0.6fr 1fr 0.8fr 1fr 0.6fr;padding:7px 14px;border-bottom:0.5px solid var(--border2)}
+    .row-c{display:grid;grid-template-columns:1.8fr 1fr 1fr 0.6fr 1fr 0.8fr 1fr 0.6fr;padding:9px 14px;border-bottom:0.5px solid var(--border);align-items:center;transition:background 0.1s}
     .row-c:last-child{border-bottom:none}
     .row-c:hover{background:var(--surface2)}
 
@@ -286,8 +286,21 @@
       if(m){honActesParMois[m-1]+=(+a.hon_ht_acte||0)}
     })
 
+    // Rémunération AA réelle (actes signés)
+    const totalRemuAA=_actes.reduce((s,a)=>s+(+a.remu_nego_ht||0),0)
+    const remuAAParMois=Array(12).fill(0)
+    _actes.forEach(a=>{const m=mn(a.date_acte);if(m)remuAAParMois[m-1]+=(+a.remu_nego_ht||0)})
+
+    // Pipeline prévisionnel AA (compromis avec date_prev_acte, sans acte réel lié)
+    const actesAdresses=new Set(_actes.map(a=>a.compromis_id).filter(Boolean))
+    const pipeline=_compromis.filter(c=>c.date_prev_acte&&!actesAdresses.has(c.id))
+    const totalRemuPrev=pipeline.reduce((s,c)=>s+(+c.ca_nego_ht||0),0)
+    const remuPrevParMois=Array(12).fill(0)
+    pipeline.forEach(c=>{const m=mn(c.date_prev_acte);if(m)remuPrevParMois[m-1]+=(+c.ca_nego_ht||0)})
+
     return{excl,tauxExcl,tauxRdv,tauxTransfo,totalCA,totalUV,totalRemu,totalHonActes,panier,projCA,avCA,
-      caParMois,remuParMois,honActesParMois,compParMois,uvParMois}
+      caParMois,remuParMois,honActesParMois,compParMois,uvParMois,
+      totalRemuAA,totalRemuPrev,remuAAParMois,remuPrevParMois,pipeline}
   }
 
   const toast=(msg,dur=2500)=>{
@@ -296,6 +309,59 @@
   }
 
   const closeModal=()=>{document.getElementById('modal-container').innerHTML=''}
+
+  const openEditActe=(id)=>{
+    const a=_actes.find(x=>x.id===id); if(!a)return
+    document.getElementById('modal-container').innerHTML=`
+      <div class="modal-overlay" id="mo">
+        <div class="modal">
+          <div class="modal-title">Modifier l'acte <button class="modal-close" id="mc">✕</button></div>
+          <div class="form-grid" style="margin-bottom:12px">
+            <div class="form-group"><label class="form-label">Adresse</label><input class="form-input" id="ea-adr" value="${a.adresse_libre||a.adresse_compromis||''}"/></div>
+            <div class="form-group"><label class="form-label">Ville</label><input class="form-input" id="ea-vil" value="${a.ville||''}"/></div>
+            <div class="form-group"><label class="form-label">Date de l'acte</label><input class="form-input" id="ea-date" type="date" value="${a.date_acte||''}"/></div>
+            <div class="form-group"><label class="form-label">Notaire vendeur</label><input class="form-input" id="ea-notv" value="${a.notaire_vendeur||''}"/></div>
+            <div class="form-group"><label class="form-label">Notaire acquéreur</label><input class="form-input" id="ea-nota" value="${a.notaire_acquereur||''}"/></div>
+            <div class="form-group"><label class="form-label">Honoraires TTC (€)</label><input class="form-input" id="ea-hon" type="number" value="${a.hon_ttc_acte||''}"/></div>
+            <div class="form-group"><label class="form-label">% Commission</label><input class="form-input" id="ea-pct" type="number" value="${a.pct_nego||''}"/></div>
+            <div class="form-group"><label class="form-label">Rémunération HT (auto)</label><input class="form-input auto" id="ea-remu" type="number" readonly value="${a.remu_nego_ht?parseFloat(a.remu_nego_ht).toFixed(2):''}"/></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn-p" id="ea-save">Enregistrer</button>
+            <button class="btn-s" id="ea-cancel">Annuler</button>
+          </div>
+        </div>
+      </div>`
+    const calcEA=()=>{
+      const ht=(parseFloat(document.getElementById('ea-hon')?.value)||0)/1.20
+      const p=parseFloat(document.getElementById('ea-pct')?.value)||0
+      const r=ht*p/100
+      const er=document.getElementById('ea-remu');if(er)er.value=r?r.toFixed(2):''
+    }
+    document.getElementById('ea-hon').oninput=calcEA
+    document.getElementById('ea-pct').oninput=calcEA
+    document.getElementById('mc').onclick=closeModal
+    document.getElementById('ea-cancel').onclick=closeModal
+    document.getElementById('mo').onclick=e=>{if(e.target.id==='mo')closeModal()}
+    document.getElementById('ea-save').onclick=async()=>{
+      const g=id=>document.getElementById(id)?.value?.trim()||''
+      const gf=id=>parseFloat(document.getElementById(id)?.value)||0
+      const honTTC=gf('ea-hon')
+      const honHT=honTTC?honTTC/1.20:null
+      const pct=gf('ea-pct')
+      const remu=honHT&&pct?honHT*pct/100:null
+      try{
+        const{error}=await sb.from('actes').update({
+          adresse_libre:g('ea-adr')||null,ville:g('ea-vil')||null,
+          date_acte:g('ea-date')||null,notaire_vendeur:g('ea-notv')||null,
+          notaire_acquereur:g('ea-nota')||null,hon_ttc_acte:honTTC||null,
+          hon_ht_acte:honHT,pct_nego:pct||null,remu_nego_ht:remu
+        }).eq('id',id)
+        if(error)throw error
+        toast('Acte mis à jour !');_actes=await getAct();closeModal();render()
+      }catch(e){toast('Erreur : '+e.message)}
+    }
+  }
 
   /* ── MODAL EDIT COMPROMIS ── */
   const openEditCompromis=(id)=>{
@@ -310,6 +376,7 @@
             <div class="form-group"><label class="form-label">Adresse</label><input class="form-input" id="ec-adr" value="${c.adresse_libre||c.adresse_mandat||''}"/></div>
             <div class="form-group"><label class="form-label">Ville</label><input class="form-input" id="ec-vil" value="${c.ville||''}"/></div>
             <div class="form-group"><label class="form-label">Date compromis</label><input class="form-input" id="ec-date" type="date" value="${c.date_compromis||''}"/></div>
+            <div class="form-group"><label class="form-label">Date prévisionnelle d'acte</label><input class="form-input" id="ec-date-prev" type="date" value="${c.date_prev_acte||''}"/></div>
             <div class="form-group"><label class="form-label">Unité de vente</label>
               <select class="form-select" id="ec-uv">
                 <option value="1" ${c.unite_vente==1?'selected':''}>1 — Entrée ET sortie</option>
@@ -352,8 +419,8 @@
         const remuNego=honHT2&&gf('ec-pct')?honHT2*gf('ec-pct')/100:null  // hon HT brut × %
         await updateCompromis(id,{
           adresse_libre:g('ec-adr')||null,ville:g('ec-vil')||null,
-          date_compromis:g('ec-date')||null,unite_vente:uv,
-          hon_ttc_reel:honTTC||null,hon_ht_reel:honHT2,
+          date_compromis:g('ec-date')||null,date_prev_acte:g('ec-date-prev')||null,
+          unite_vente:uv,hon_ttc_reel:honTTC||null,hon_ht_reel:honHT2,
           hon_ht_uv:honHtUv2,ca_nego_ht:remuNego,
           pct_nego:gf('ec-pct')||null
         })
@@ -448,6 +515,23 @@
       return MSH.map((m,i)=>{const v=arr[i],h=Math.round(v/mx*100)
         return`<div class="bar-col"><div class="bar-wrap"><div class="bar${v>0?' '+cls:''}" style="height:${h||5}%"></div></div><div class="bar-m">${m}</div></div>`}).join('')
     }
+    const mkBarsStacked=(arrReal,arrPrev)=>{
+      const mx=Math.max(...arrReal.map((v,i)=>v+(arrPrev[i]||0)),1)
+      return MSH.map((m,i)=>{
+        const vr=arrReal[i],vp=arrPrev[i]
+        const hr=Math.round(vr/mx*100),hp=Math.round(vp/mx*100)
+        const hasReal=vr>0,hasPrev=vp>0
+        return`<div class="bar-col" style="position:relative">
+          <div style="font-size:8px;color:var(--muted);font-family:'DM Mono',monospace;text-align:center;min-height:12px;white-space:nowrap">
+            ${hasReal||hasPrev?`<span style="color:${hasReal?'var(--green)':'transparent'}">${hasReal?fmt(vr).replace('\u00a0€',''):''}</span>${hasPrev?`<span style="color:var(--amber);margin-left:2px">${fmt(vp).replace('\u00a0€','')}</span>`:''}`:''}</div>
+          <div class="bar-wrap" style="flex-direction:column;justify-content:flex-end;align-items:stretch">
+            ${hasPrev?`<div style="width:100%;height:${hp}%;background:rgba(251,191,36,0.4);border:1px dashed var(--amber);border-bottom:none;border-radius:2px 2px 0 0"></div>`:''}
+            ${hasReal?`<div style="width:100%;height:${hr}%;background:var(--green);border-radius:${hasPrev?'0':'2px 2px'} 0 0"></div>`:''}
+            ${!hasReal&&!hasPrev?`<div style="height:5%;background:var(--surface3);border-radius:2px 2px 0 0;width:100%"></div>`:''}
+          </div>
+          <div class="bar-m">${m}</div>
+        </div>`}).join('')
+    }
     const mkBarsAmt=(arr,cls)=>{
       const mx=Math.max(...arr,1)
       return MSH.map((m,i)=>{const v=arr[i],h=Math.round(v/mx*100)
@@ -464,9 +548,9 @@
       <div class="page-sub">${me} mois écoulés · ${_cfg.annee||2026}</div>
 
       <div class="kpi-grid">
-        <div class="kpi-card"><div class="kpi-label">CA HT agence (compromis)</div><div class="kpi-value ${caCol}">${fmt(s.totalCA)}</div><div class="kpi-sub">Σ hon. HT × UV · obj. ${fmt(_cfg.objectif_ca||160000)} · ${avPct}%</div></div>
-        <div class="kpi-card"><div class="kpi-label">Rémunération négociateur HT</div><div class="kpi-value ok">${fmt(s.totalRemu)}</div><div class="kpi-sub">hon. HT brut × % commission · ${_compromis.length} compromis</div></div>
-        <div class="kpi-card"><div class="kpi-label">Honoraires actes signés HT</div><div class="kpi-value neu">${fmt(s.totalHonActes)}</div><div class="kpi-sub">${_actes.length} acte(s) authentique(s)</div></div>
+        <div class="kpi-card"><div class="kpi-label">CA HT compromis signés</div><div class="kpi-value ${caCol}">${fmt(s.totalCA)}</div><div class="kpi-sub">Σ hon. HT × UV · obj. ${fmt(_cfg.objectif_ca||160000)} · ${avPct}%</div></div>
+        <div class="kpi-card"><div class="kpi-label">Rémunération compromis signés</div><div class="kpi-value ok">${fmt(s.totalRemu)}</div><div class="kpi-sub">hon. HT × % commission · ${_compromis.length} compromis</div></div>
+        <div class="kpi-card"><div class="kpi-label">Rémunération AA réalisée</div><div class="kpi-value ok">${fmt(s.totalRemuAA)}</div><div class="kpi-sub">${_actes.length} acte(s) · prév. ${fmt(s.totalRemuPrev)}</div></div>
         <div class="kpi-card"><div class="kpi-label">Panier moyen / UV</div><div class="kpi-value neu">${s.totalUV?fmt(s.panier):'—'}</div><div class="kpi-sub">CA HT ÷ ${s.totalUV} UV</div></div>
       </div>
 
@@ -491,16 +575,16 @@
       <div class="section-label">Évolution mensuelle</div>
       <div class="charts-grid">
         <div class="chart-wrap">
-          <div class="chart-title">CA HT compromis</div>
+          <div class="chart-title">CA HT compromis signés</div>
           <div class="bar-chart">${mkBarsAmt(s.caParMois,'on')}</div>
         </div>
         <div class="chart-wrap">
-          <div class="chart-title">Rémunération négociateur HT</div>
+          <div class="chart-title">Rémunération compromis signés</div>
           <div class="bar-chart">${mkBarsAmt(s.remuParMois,'on-g')}</div>
         </div>
         <div class="chart-wrap">
-          <div class="chart-title">Hon. actes authentiques HT</div>
-          <div class="bar-chart">${mkBarsAmt(s.honActesParMois,'on-b')}</div>
+          <div class="chart-title">Rémunération AA (réel + prévisionnel)</div>
+          <div class="bar-chart">${mkBarsStacked(s.remuAAParMois,s.remuPrevParMois)}</div>
         </div>
       </div>
 
@@ -591,6 +675,7 @@
         <span class="td">${c.adresse_libre||c.adresse_mandat||'—'}</span>
         <span class="td td-mu">${c.ville||'—'}</span>
         <span class="td td-mu">${d}</span>
+        <span class="td td-mu">${c.unite_vente!=null?c.unite_vente:'-'}</span>
         <span class="td td-m">${c.hon_ht_uv!=null?fmtN(Math.round(c.hon_ht_uv))+' €':'—'}</span>
         <span class="td td-m">${c.pct_nego?c.pct_nego+'%':'—'}</span>
         <span class="td td-g">${c.ca_nego_ht?fmt(Math.round(c.ca_nego_ht)):'—'}</span>
@@ -611,6 +696,7 @@
           <div class="form-group"><label class="form-label">Adresse (si libre)</label><input class="form-input" id="c-adr" placeholder="12 rue des Lilas"/></div>
           <div class="form-group"><label class="form-label">Ville</label><input class="form-input" id="c-vil" placeholder="LORIENT"/></div>
           <div class="form-group"><label class="form-label">Date du compromis</label><input class="form-input" id="c-date" type="date"/></div>
+          <div class="form-group"><label class="form-label">Date prévisionnelle d'acte</label><input class="form-input" id="c-date-prev" type="date"/></div>
           <div class="form-group"><label class="form-label">Unité de vente</label>
             <select class="form-select" id="c-uv">
               <option value="1">1 — Entrée ET sortie</option>
@@ -630,7 +716,7 @@
       </div>
       <div class="table-wrap">
         <div class="table-toolbar"><span class="table-count">${_compromis.length} compromis · ${_compromis.reduce((s,c)=>s+(+c.unite_vente||0),0)} UV · ${fmt(Math.round(_compromis.reduce((s,c)=>s+(+c.ca_nego_ht||0),0)))} CA HT</span></div>
-        <div class="t-head-c"><span class="th">Adresse</span><span class="th">Ville</span><span class="th">Date</span><span class="th">Hon. HT × UV</span><span class="th">% Négo</span><span class="th">Rémunération HT</span><span class="th"></span></div>
+        <div class="t-head-c"><span class="th">Adresse</span><span class="th">Ville</span><span class="th">Date</span><span class="th">UV</span><span class="th">Hon. HT × UV</span><span class="th">% Négo</span><span class="th">Rémunération HT</span><span class="th"></span></div>
         <div class="table-body">${rows||'<div class="empty-st">Aucun compromis saisi.</div>'}</div>
       </div>`
   }
@@ -647,7 +733,10 @@
         <span class="td td-m">${a.hon_ht_acte?fmtN(Math.round(a.hon_ht_acte))+' €':'—'}</span>
         <span class="td td-m">${a.pct_nego?a.pct_nego+'%':'—'}</span>
         <span class="td td-g">${a.remu_nego_ht?fmt(Math.round(a.remu_nego_ht)):'—'}</span>
-        <span class="td td-act"><button class="btn-del" data-del-a="${a.id}">✕</button></span>
+        <span class="td td-act">
+          <button class="btn-edit" data-edit-a="${a.id}" title="Modifier">✎</button>
+          <button class="btn-del" data-del-a="${a.id}" title="Supprimer">✕</button>
+        </span>
       </div>`}).join('')
 
     return`
@@ -812,7 +901,7 @@
         const honHtUv=honHT?honHT*uv:null
         const pctNego=gf('c-pct')||null
         const remuNego=honHT&&pctNego?honHT*pctNego/100:null
-        await addCompromis({mandat_id:mid||null,adresse_mandat:m?.adresse||null,adresse_libre:!mid?g('c-adr')||null:null,ville:g('c-vil')||m?.ville||null,date_compromis:g('c-date')||null,unite_vente:uv,hon_ttc_reel:honTTC||null,hon_ht_reel:honHT,hon_ht_uv:honHtUv,pct_nego:pctNego,ca_nego_ht:remuNego})
+        await addCompromis({mandat_id:mid||null,adresse_mandat:m?.adresse||null,adresse_libre:!mid?g('c-adr')||null:null,ville:g('c-vil')||m?.ville||null,date_compromis:g('c-date')||null,date_prev_acte:g('c-date-prev')||null,unite_vente:uv,hon_ttc_reel:honTTC||null,hon_ht_reel:honHT,hon_ht_uv:honHtUv,pct_nego:pctNego,ca_nego_ht:remuNego})
         toast('Compromis enregistré !');_compromis=await getCom();render()
       }catch(e){toast('Erreur : '+e.message)}
     }
@@ -876,6 +965,8 @@
       if(!confirm('Supprimer ce compromis ?'))return
       try{await delCompromis(b.dataset.delC);toast('Supprimé');_compromis=await getCom();render()}catch(e){toast('Erreur')}
     })
+    // Edit actes
+    document.querySelectorAll('[data-edit-a]').forEach(b=>b.onclick=()=>openEditActe(b.dataset.editA))
     // Delete actes
     document.querySelectorAll('[data-del-a]').forEach(b=>b.onclick=async()=>{
       if(!confirm('Supprimer cet acte ?'))return
