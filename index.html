@@ -263,7 +263,6 @@
     // Honoraires actes authentiques HT
     const totalHonActes=_actes.reduce((s,a)=>s+(+a.hon_ht_acte||0),0)
     // Honoraires actes authentiques
-    const totalHonActes=_actes.reduce((s,a)=>s+(+a.hon_ht_acte||0),0)
     // Panier moyen = CA HT / UV
     const panier=totalUV?totalCA/totalUV:0
     const me=_cfg.mois_ecoules||3.6
