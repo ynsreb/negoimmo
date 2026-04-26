@@ -222,7 +222,7 @@
 
   const addCompromis = async c=>{
     const hon_ht=c.hon_ttc_reel?c.hon_ttc_reel/1.20:null
-    // CA HT négociateur = honoraires HT × UV (0, 0.5 ou 1)
+    // CA HT agence = honoraires HT × UV
     const uv=parseFloat(c.unite_vente)||0
     const ca_nego_ht=hon_ht?hon_ht*uv:null
     const{data,error}=await sb.from('compromis').insert({user_id:_user.id,...c,hon_ht_reel:hon_ht,ca_nego_ht}).select().single()
@@ -251,12 +251,17 @@
     const tauxRdv=_rdv&&_mandats.length?_mandats.length/_rdv:0
     const tauxTransfo=_mandats.length&&_compromis.length?_compromis.length/_mandats.length:0
 
-    // CA HT = honoraires HT × UV (ca_nego_ht calculé à l'insertion)
+    // CA HT agence = somme des (honoraires HT × UV) de tous les compromis
     const totalCA=_compromis.reduce((s,c)=>s+(+c.ca_nego_ht||0),0)
-    // UV = compromis avec unite_vente > 0
+    // UV total
     const totalUV=_compromis.reduce((s,c)=>s+(+c.unite_vente||0),0)
-    // Rémunération négociateur = CA HT × % commission
-    const totalRemu=_compromis.reduce((s,c)=>s+(c.pct_nego?(+c.ca_nego_ht||0)*c.pct_nego/100:0),0)
+    // Rémunération négociateur HT = CA HT × % commission
+    const totalRemu=_compromis.reduce((s,c)=>{
+      const caht=+c.ca_nego_ht||0
+      return s+(c.pct_nego?caht*c.pct_nego/100:0)
+    },0)
+    // Honoraires actes authentiques HT
+    const totalHonActes=_actes.reduce((s,a)=>s+(+a.hon_ht_acte||0),0)
     // Honoraires actes authentiques
     const totalHonActes=_actes.reduce((s,a)=>s+(+a.hon_ht_acte||0),0)
     // Panier moyen = CA HT / UV
@@ -274,8 +279,9 @@
     _compromis.forEach(c=>{
       const m=mn(c.date_compromis)
       if(m){
-        caParMois[m-1]+=(+c.ca_nego_ht||0)
-        remuParMois[m-1]+=(c.pct_nego?(+c.ca_nego_ht||0)*c.pct_nego/100:0)
+        const caht=+c.ca_nego_ht||0
+        caParMois[m-1]+=caht
+        remuParMois[m-1]+=(c.pct_nego?caht*c.pct_nego/100:0)
         compParMois[m-1]++
         uvParMois[m-1]+=(+c.unite_vente||0)
       }
@@ -460,10 +466,10 @@
       <div class="page-sub">${me} mois écoulés · ${_cfg.annee||2026}</div>
 
       <div class="kpi-grid">
-        <div class="kpi-card"><div class="kpi-label">CA HT compromis</div><div class="kpi-value ${caCol}">${fmt(s.totalCA)}</div><div class="kpi-sub">honoraires HT · obj. ${fmt(_cfg.objectif_ca||160000)} · ${avPct}%</div></div>
-        <div class="kpi-card"><div class="kpi-label">Rémunération négociateur HT</div><div class="kpi-value ok">${fmt(s.totalRemu)}</div><div class="kpi-sub">${_compromis.length} compromis · % commission</div></div>
-        <div class="kpi-card"><div class="kpi-label">Hon. actes authentiques HT</div><div class="kpi-value neu">${fmt(s.totalHonActes)}</div><div class="kpi-sub">${_actes.length} acte(s) signé(s)</div></div>
-        <div class="kpi-card"><div class="kpi-label">Panier moyen / UV</div><div class="kpi-value neu">${s.totalUV?fmt(s.panier):'—'}</div><div class="kpi-sub">CA HT / ${s.totalUV} UV</div></div>
+        <div class="kpi-card"><div class="kpi-label">CA HT agence (compromis)</div><div class="kpi-value ${caCol}">${fmt(s.totalCA)}</div><div class="kpi-sub">hon. HT × UV · obj. ${fmt(_cfg.objectif_ca||160000)} · ${avPct}%</div></div>
+        <div class="kpi-card"><div class="kpi-label">Rémunération négociateur HT</div><div class="kpi-value ok">${fmt(s.totalRemu)}</div><div class="kpi-sub">CA HT × % commission · ${_compromis.length} compromis</div></div>
+        <div class="kpi-card"><div class="kpi-label">Honoraires actes signés HT</div><div class="kpi-value neu">${fmt(s.totalHonActes)}</div><div class="kpi-sub">${_actes.length} acte(s) authentique(s)</div></div>
+        <div class="kpi-card"><div class="kpi-label">Panier moyen / UV</div><div class="kpi-value neu">${s.totalUV?fmt(s.panier):'—'}</div><div class="kpi-sub">CA HT ÷ ${s.totalUV} UV</div></div>
       </div>
 
       <div class="taux-grid">
@@ -615,9 +621,9 @@
             </select></div>
           <div class="form-group"><label class="form-label">Honoraires réels TTC (€)</label><input class="form-input" id="c-hon-ttc" type="number" placeholder="15 000"/></div>
           <div class="form-group"><label class="form-label">Honoraires réels HT (auto)</label><input class="form-input auto" id="c-hon-ht" type="number" readonly placeholder="calculé"/></div>
-          <div class="form-group"><label class="form-label">CA HT négociateur (auto = Hon. HT × UV)</label><input class="form-input hi" id="c-ca" type="number" readonly placeholder="calculé"/></div>
+          <div class="form-group"><label class="form-label">CA HT agence (auto = Hon. HT × UV)</label><input class="form-input hi" id="c-ca" type="number" readonly placeholder="hon. HT × UV"/></div>
           <div class="form-group"><label class="form-label">% Commission négociateur</label><input class="form-input" id="c-pct" type="number" placeholder="ex: 22"/></div>
-          <div class="form-group"><label class="form-label">Rémunération HT (auto = CA HT × %)</label><input class="form-input hi" id="c-remu" type="number" readonly placeholder="calculé"/></div>
+          <div class="form-group"><label class="form-label">Rémunération négo HT (auto = CA HT × %)</label><input class="form-input" id="c-remu" type="number" readonly style="background:rgba(251,191,36,0.06);color:var(--amber);border-color:rgba(251,191,36,0.2)" placeholder="CA HT × % commission"/></div>
         </div>
         <div class="form-actions">
           <button class="btn-p" id="btn-save-c">Enregistrer le compromis</button>
@@ -686,16 +692,16 @@
       <div class="page-title">Rémunération</div>
       <div class="page-sub">Suivi des commissions négociateur</div>
       <div class="kpi-grid">
-        <div class="kpi-card"><div class="kpi-label">CA HT compromis</div><div class="kpi-value ok">${fmt(Math.round(s.totalCA))}</div><div class="kpi-sub">${s.totalUV} UV · ${_compromis.length} compromis</div></div>
-        <div class="kpi-card"><div class="kpi-label">Rémunération négociateur HT</div><div class="kpi-value ok">${fmt(Math.round(s.totalRemu))}</div><div class="kpi-sub">% commission sur honoraires HT</div></div>
-        <div class="kpi-card"><div class="kpi-label">Projection CA annuel</div><div class="kpi-value neu">${fmt(Math.round(s.projCA))}</div><div class="kpi-sub">au rythme actuel</div></div>
+        <div class="kpi-card"><div class="kpi-label">CA HT agence (compromis)</div><div class="kpi-value ok">${fmt(Math.round(s.totalCA))}</div><div class="kpi-sub">${s.totalUV} UV · ${_compromis.length} compromis</div></div>
+        <div class="kpi-card"><div class="kpi-label">Rémunération négociateur HT</div><div class="kpi-value warn">${fmt(Math.round(s.totalRemu))}</div><div class="kpi-sub">CA HT × % commission</div></div>
+        <div class="kpi-card"><div class="kpi-label">Projection CA agence / an</div><div class="kpi-value neu">${fmt(Math.round(s.projCA))}</div><div class="kpi-sub">au rythme actuel</div></div>
         <div class="kpi-card"><div class="kpi-label">Avancement obj. officiel</div><div class="kpi-value ${s.avCA>=0.5?'ok':'warn'}">${Math.round(s.avCA*100)}%</div><div class="kpi-sub">${fmt(_cfg.objectif_ca||160000)}</div></div>
       </div>
       <div class="section-label">Récapitulatif mensuel</div>
       <div class="recap-grid">
         <div class="recap-card"><div class="recap-head">Compromis / mois</div>${mkR(s.compParMois,false)}</div>
-        <div class="recap-card"><div class="recap-head">CA HT compromis / mois</div>${mkR(s.caParMois,true)}</div>
-        <div class="recap-card"><div class="recap-head">Rémunération négociateur HT / mois</div>${mkR(s.remuParMois,true)}</div>
+        <div class="recap-card"><div class="recap-head">CA HT agence / mois</div>${mkR(s.caParMois,true)}</div>
+        <div class="recap-card"><div class="recap-head">Rémunération négo HT / mois</div>${mkR(s.remuParMois,true)}</div>
       </div>
       <div class="section-label">Projection annuelle</div>
       <div class="proj-grid">
