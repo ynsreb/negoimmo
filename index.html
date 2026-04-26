@@ -556,38 +556,61 @@
 
       <div class="kpi-grid">
         <div class="kpi-card"><div class="kpi-label">CA HT compromis signés</div><div class="kpi-value ${caCol}">${fmt(s.totalCA)}</div><div class="kpi-sub">Σ hon. HT × UV · obj. ${fmt(_cfg.objectif_ca||160000)} · ${avPct}%</div></div>
-        <div class="kpi-card"><div class="kpi-label">Rémunération compromis signés</div><div class="kpi-value ok">${fmt(s.totalRemu)}</div><div class="kpi-sub">hon. HT × % commission · ${_compromis.length} compromis</div></div>
+        <div class="kpi-card"><div class="kpi-label">Rémunération totale compromis signés</div><div class="kpi-value ok">${fmt(s.totalRemu)}</div><div class="kpi-sub">hon. HT × % commission · ${_compromis.length} compromis</div></div>
         <div class="kpi-card"><div class="kpi-label">Rémunération AA réalisée</div><div class="kpi-value ok">${fmt(s.totalRemuAA)}</div><div class="kpi-sub">${_actes.length} acte(s) · prév. ${fmt(s.totalRemuPrev)}</div></div>
         <div class="kpi-card"><div class="kpi-label">Panier moyen / UV</div><div class="kpi-value neu">${s.totalUV?fmt(s.panier):'—'}</div><div class="kpi-sub">CA HT ÷ ${s.totalUV} UV</div></div>
+      </div>
+
+      <div class="hero-stats">
+        <div class="hero-card">
+          <div class="hero-num neu">${s.totalUV}</div>
+          <div class="hero-info"><div class="hero-label">Unités de vente</div><div class="hero-sub">${_compromis.length} compromis · obj. ${_cfg.objectif_mandats||36}/an</div></div>
+        </div>
+        <div class="hero-card">
+          <div class="hero-num ${exCol}">${Math.round(s.tauxExcl*100)}%</div>
+          <div class="hero-info"><div class="hero-label">Taux d'exclusivité</div><div class="hero-sub">${s.excl} exclusifs · ${_mandats.length} mandats · obj. 50%</div></div>
+        </div>
+        <div class="hero-card">
+          <div class="hero-num ${s.tauxTransfo>=0.5?'ok':'warn'}">${Math.round(s.tauxTransfo*100)}%</div>
+          <div class="hero-info"><div class="hero-label">Taux mandat → vente</div><div class="hero-sub">${_compromis.length} ventes / ${_mandats.length} mandats</div></div>
+        </div>
       </div>
 
       <div class="taux-grid">
         <div class="taux-card">
           <div class="taux-head"><span class="taux-title">Taux RDV → mandat</span><span class="taux-pct ${s.tauxRdv>=0.35?'ok':'warn'}">${Math.round(s.tauxRdv*100)}%</span></div>
           <div class="taux-track"><div class="taux-fill" style="width:${Math.min(s.tauxRdv*100,100)}%;background:var(--green)"></div></div>
-          <div class="taux-detail">${_mandats.length} mandats / ${_rdv} RDV</div>
+          <div class="taux-detail">${_mandats.length} mandats / ${_rdv} RDV · (saisir RDV en bas)</div>
         </div>
         <div class="taux-card">
-          <div class="taux-head"><span class="taux-title">Taux mandat → vente</span><span class="taux-pct ${s.tauxTransfo>=0.5?'ok':'warn'}">${Math.round(s.tauxTransfo*100)}%</span></div>
-          <div class="taux-track"><div class="taux-fill" style="width:${Math.min(s.tauxTransfo*100,100)}%;background:var(--amber)"></div></div>
-          <div class="taux-detail">${_compromis.length} ventes / ${_mandats.length} mandats</div>
+          <div class="taux-head"><span class="taux-title">Mandats pris (obj. ${_cfg.objectif_mandats||36}/an)</span><span class="taux-pct ${avMand>=40?'ok':'warn'}">${avMand}%</span></div>
+          <div class="taux-track"><div class="taux-fill" style="width:${Math.min(avMand,100)}%;background:var(--text)"></div></div>
+          <div class="taux-detail">${_mandats.length} pris · proj. ${Math.round(me>0?_mandats.length/me*12:0)}/an</div>
         </div>
         <div class="taux-card">
-          <div class="taux-head"><span class="taux-title">Taux d'exclusivité</span><span class="taux-pct ${exCol}">${Math.round(s.tauxExcl*100)}%</span></div>
-          <div class="taux-track"><div class="taux-fill" style="width:${Math.min(s.tauxExcl*100,100)}%;background:var(--text)"></div></div>
-          <div class="taux-detail">${s.excl} exclusifs / ${_mandats.length} mandats · obj. 50%</div>
+          <div class="taux-head"><span class="taux-title">Avancement obj. officieux (${fmt(_cfg.objectif_ca_off||200000)})</span><span class="taux-pct ${avPctOff>=50?'ok':'warn'}">${avPctOff}%</span></div>
+          <div class="taux-track"><div class="taux-fill" style="width:${Math.min(avPctOff,100)}%;background:var(--amber)"></div></div>
+          <div class="taux-detail">${fmt(s.totalCA)} / ${fmt(_cfg.objectif_ca_off||200000)}</div>
         </div>
       </div>
 
-      <div class="section-label">Évolution mensuelle</div>
-      <div class="charts-grid">
+      <div class="section-label">Compromis signés · évolution mensuelle</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
         <div class="chart-wrap">
           <div class="chart-title">CA HT compromis signés</div>
           <div class="bar-chart">${mkBarsAmt(s.caParMois,'on')}</div>
         </div>
         <div class="chart-wrap">
-          <div class="chart-title">Rémunération compromis signés</div>
+          <div class="chart-title">Rémunération totale compromis signés</div>
           <div class="bar-chart">${mkBarsAmt(s.remuParMois,'on-g')}</div>
+        </div>
+      </div>
+
+      <div class="section-label">Actes authentiques · évolution mensuelle</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+        <div class="chart-wrap">
+          <div class="chart-title">CA HT actes (réel + prévisionnel)</div>
+          <div class="bar-chart">${mkBarsStacked(s.honActesParMois,s.honPrevParMois)}</div>
         </div>
         <div class="chart-wrap">
           <div class="chart-title">Rémunération AA (réel + prévisionnel)</div>
@@ -786,8 +809,8 @@
       <div class="page-title">Rémunération</div>
       <div class="page-sub">Suivi des commissions négociateur</div>
       <div class="kpi-grid">
-        <div class="kpi-card"><div class="kpi-label">CA HT agence (compromis)</div><div class="kpi-value ok">${fmt(Math.round(s.totalCA))}</div><div class="kpi-sub">${s.totalUV} UV · ${_compromis.length} compromis</div></div>
-        <div class="kpi-card"><div class="kpi-label">Rémunération totale compromis signés</div><div class="kpi-value warn">${fmt(Math.round(s.totalRemu))}</div><div class="kpi-sub">hon. HT brut × % commission</div></div>
+        <div class="kpi-card"><div class="kpi-label">CA HT compromis signés</div><div class="kpi-value ok">${fmt(Math.round(s.totalCA))}</div><div class="kpi-sub">${s.totalUV} UV · ${_compromis.length} compromis</div></div>
+        <div class="kpi-card"><div class="kpi-label">Rémunération totale compromis signés</div><div class="kpi-value warn">${fmt(Math.round(s.totalRemu))}</div><div class="kpi-sub">hon. HT × % commission</div></div>
         <div class="kpi-card"><div class="kpi-label">Projection CA compromis signés</div><div class="kpi-value neu">${fmt(Math.round(s.projCA))}</div><div class="kpi-sub">au rythme actuel</div></div>
         <div class="kpi-card"><div class="kpi-label">Avancement obj. officiel</div><div class="kpi-value ${s.avCA>=0.5?'ok':'warn'}">${Math.round(s.avCA*100)}%</div><div class="kpi-sub">${fmt(_cfg.objectif_ca||160000)}</div></div>
       </div>
