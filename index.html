@@ -196,6 +196,12 @@
   const fmt  = v => (+v||0).toLocaleString('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0})
   const fmtN = v => Math.round(+v||0).toLocaleString('fr-FR')
   const mn   = d => d?new Date(d).getMonth()+1:null
+  // Mois comptable : si jour >= 22, compte pour le mois suivant
+  const mnC  = d => {
+    if(!d) return null
+    const dt=new Date(d), day=dt.getDate(), m=dt.getMonth()+1
+    return day>=22 ? (m===12?1:m+1) : m
+  }
 
   let _user=null,_mandats=[],_compromis=[],_actes=[],_cfg={...CFG},_page='dashboard'
   let _rdv=0,_visites=0
@@ -283,7 +289,7 @@
       }
     })
     _actes.forEach(a=>{
-      const m=mn(a.date_acte)
+      const m=mnC(a.date_acte)  // mois comptable (cycle 22→22)
       if(m){honActesParMois[m-1]+=(+a.hon_ht_acte||0)}
     })
     // CA HT prévisionnel actes = hon_ht_reel des compromis avec date_prev_acte sans acte lié
@@ -292,7 +298,7 @@
     // Rémunération AA réelle (actes signés)
     const totalRemuAA=_actes.reduce((s,a)=>s+(+a.remu_nego_ht||0),0)
     const remuAAParMois=Array(12).fill(0)
-    _actes.forEach(a=>{const m=mn(a.date_acte);if(m)remuAAParMois[m-1]+=(+a.remu_nego_ht||0)})
+    _actes.forEach(a=>{const m=mnC(a.date_acte);if(m)remuAAParMois[m-1]+=(+a.remu_nego_ht||0)})  // mois comptable
 
     // Pipeline prévisionnel AA (compromis avec date_prev_acte, sans acte réel lié)
     const actesAdresses=new Set(_actes.map(a=>a.compromis_id).filter(Boolean))
@@ -300,7 +306,7 @@
     const totalRemuPrev=pipeline.reduce((s,c)=>s+(+c.ca_nego_ht||0),0)
     const remuPrevParMois=Array(12).fill(0)
     pipeline.forEach(c=>{
-      const m=mn(c.date_prev_acte)
+      const m=mnC(c.date_prev_acte)  // mois comptable (cycle 22→22)
       if(m){remuPrevParMois[m-1]+=(+c.ca_nego_ht||0);honPrevParMois[m-1]+=(+c.hon_ht_reel||0)}
     })
 
