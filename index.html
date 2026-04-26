@@ -222,10 +222,18 @@
 
   const addCompromis = async c=>{
     const hon_ht=c.hon_ttc_reel?c.hon_ttc_reel/1.20:null
-    // CA HT = hon_ht × pct_nego / 100 (pct_nego inclut déjà entrée+sortie)
-    const ca_nego_ht=hon_ht&&c.pct_nego?hon_ht*c.pct_nego/100:null
+    // CA HT négociateur = honoraires HT × UV (0, 0.5 ou 1)
+    const uv=parseFloat(c.unite_vente)||0
+    const ca_nego_ht=hon_ht?hon_ht*uv:null
     const{data,error}=await sb.from('compromis').insert({user_id:_user.id,...c,hon_ht_reel:hon_ht,ca_nego_ht}).select().single()
     if(error)throw error;return data
+  }
+  const updateCompromis = async(id,updates)=>{
+    if(updates.hon_ttc_reel||updates.unite_vente!==undefined){
+      // Recalculate on update
+    }
+    const{error}=await sb.from('compromis').update(updates).eq('id',id)
+    if(error)throw error
   }
   const delCompromis = async id=>{const{error}=await sb.from('compromis').delete().eq('id',id);if(error)throw error}
 
@@ -243,12 +251,12 @@
     const tauxRdv=_rdv&&_mandats.length?_mandats.length/_rdv:0
     const tauxTransfo=_mandats.length&&_compromis.length?_compromis.length/_mandats.length:0
 
-    // CA HT = somme honoraires HT de tous les compromis signés
-    const totalCA=_compromis.reduce((s,c)=>s+(+c.hon_ht_reel||0),0)
+    // CA HT = honoraires HT × UV (ca_nego_ht calculé à l'insertion)
+    const totalCA=_compromis.reduce((s,c)=>s+(+c.ca_nego_ht||0),0)
     // UV = compromis avec unite_vente > 0
     const totalUV=_compromis.reduce((s,c)=>s+(+c.unite_vente||0),0)
-    // Rémunération négociateur = honoraires HT compromis × % commission
-    const totalRemu=_compromis.reduce((s,c)=>s+(+c.ca_nego_ht||0),0)
+    // Rémunération négociateur = CA HT × % commission
+    const totalRemu=_compromis.reduce((s,c)=>s+(c.pct_nego?(+c.ca_nego_ht||0)*c.pct_nego/100:0),0)
     // Honoraires actes authentiques
     const totalHonActes=_actes.reduce((s,a)=>s+(+a.hon_ht_acte||0),0)
     // Panier moyen = CA HT / UV
@@ -266,8 +274,8 @@
     _compromis.forEach(c=>{
       const m=mn(c.date_compromis)
       if(m){
-        caParMois[m-1]+=(+c.hon_ht_reel||0)
-        remuParMois[m-1]+=(+c.ca_nego_ht||0)
+        caParMois[m-1]+=(+c.ca_nego_ht||0)
+        remuParMois[m-1]+=(c.pct_nego?(+c.ca_nego_ht||0)*c.pct_nego/100:0)
         compParMois[m-1]++
         uvParMois[m-1]+=(+c.unite_vente||0)
       }
@@ -287,6 +295,68 @@
   }
 
   const closeModal=()=>{document.getElementById('modal-container').innerHTML=''}
+
+  /* ── MODAL EDIT COMPROMIS ── */
+  const openEditCompromis=(id)=>{
+    const c=_compromis.find(x=>x.id===id); if(!c)return
+    const honHT=c.hon_ht_reel?parseFloat(c.hon_ht_reel).toFixed(2):''
+    const caHT=c.ca_nego_ht?parseFloat(c.ca_nego_ht).toFixed(2):''
+    document.getElementById('modal-container').innerHTML=`
+      <div class="modal-overlay" id="mo">
+        <div class="modal">
+          <div class="modal-title">Modifier le compromis <button class="modal-close" id="mc">✕</button></div>
+          <div class="form-grid" style="margin-bottom:12px">
+            <div class="form-group"><label class="form-label">Adresse</label><input class="form-input" id="ec-adr" value="${c.adresse_libre||c.adresse_mandat||''}"/></div>
+            <div class="form-group"><label class="form-label">Ville</label><input class="form-input" id="ec-vil" value="${c.ville||''}"/></div>
+            <div class="form-group"><label class="form-label">Date compromis</label><input class="form-input" id="ec-date" type="date" value="${c.date_compromis||''}"/></div>
+            <div class="form-group"><label class="form-label">Unité de vente</label>
+              <select class="form-select" id="ec-uv">
+                <option value="1" ${c.unite_vente==1?'selected':''}>1 — Entrée ET sortie</option>
+                <option value="0.5" ${c.unite_vente==0.5?'selected':''}>0,5 — Entrée OU sortie</option>
+                <option value="0" ${c.unite_vente==0?'selected':''}>0 — Participation (hors UV)</option>
+              </select></div>
+            <div class="form-group"><label class="form-label">Honoraires TTC (€)</label><input class="form-input" id="ec-hon-ttc" type="number" value="${c.hon_ttc_reel||''}"/></div>
+            <div class="form-group"><label class="form-label">Honoraires HT (auto)</label><input class="form-input auto" id="ec-hon-ht" type="number" readonly value="${honHT}"/></div>
+            <div class="form-group"><label class="form-label">CA HT négo (auto)</label><input class="form-input hi" id="ec-ca" type="number" readonly value="${caHT}"/></div>
+            <div class="form-group"><label class="form-label">% Commission négociateur</label><input class="form-input" id="ec-pct" type="number" value="${c.pct_nego||''}"/></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn-p" id="ec-save">Enregistrer</button>
+            <button class="btn-s" id="ec-cancel">Annuler</button>
+          </div>
+        </div>
+      </div>`
+    // Auto-calc in modal
+    const calcModal=()=>{
+      const ht=(parseFloat(document.getElementById('ec-hon-ttc')?.value)||0)/1.20
+      const uv=parseFloat(document.getElementById('ec-uv')?.value)||0
+      const ca=ht*uv
+      const eh=document.getElementById('ec-hon-ht');if(eh)eh.value=ht?ht.toFixed(2):''
+      const ec2=document.getElementById('ec-ca');if(ec2)ec2.value=ca?ca.toFixed(2):''
+    }
+    document.getElementById('ec-hon-ttc').oninput=calcModal
+    document.getElementById('ec-uv').onchange=calcModal
+    document.getElementById('mc').onclick=closeModal
+    document.getElementById('ec-cancel').onclick=closeModal
+    document.getElementById('mo').onclick=e=>{if(e.target.id==='mo')closeModal()}
+    document.getElementById('ec-save').onclick=async()=>{
+      const g=id=>document.getElementById(id)?.value?.trim()||''
+      const gf=id=>parseFloat(document.getElementById(id)?.value)||0
+      const honTTC=gf('ec-hon-ttc')
+      const honHT2=honTTC?honTTC/1.20:null
+      const uv=parseFloat(g('ec-uv'))||0
+      const caNego=honHT2?honHT2*uv:null
+      try{
+        await updateCompromis(id,{
+          adresse_libre:g('ec-adr')||null,ville:g('ec-vil')||null,
+          date_compromis:g('ec-date')||null,unite_vente:uv,
+          hon_ttc_reel:honTTC||null,hon_ht_reel:honHT2,ca_nego_ht:caNego,
+          pct_nego:gf('ec-pct')||null
+        })
+        toast('Compromis mis à jour !');_compromis=await getCom();closeModal();render()
+      }catch(e){toast('Erreur : '+e.message)}
+    }
+  }
 
   /* ── LOGIN ── */
   const renderLogin=(mode='login')=>{
@@ -520,7 +590,10 @@
         <span class="td td-m">${c.hon_ht_reel?fmtN(Math.round(c.hon_ht_reel))+' €':'—'}</span>
         <span class="td td-m">${c.pct_nego?c.pct_nego+'%':'—'}</span>
         <span class="td td-g">${c.ca_nego_ht?fmt(Math.round(c.ca_nego_ht)):'—'}</span>
-        <span class="td td-act"><button class="btn-del" data-del-c="${c.id}">✕</button></span>
+        <span class="td td-act">
+          <button class="btn-edit" data-edit-c="${c.id}" title="Modifier">✎</button>
+          <button class="btn-del" data-del-c="${c.id}" title="Supprimer">✕</button>
+        </span>
       </div>`}).join('')
 
     return`
@@ -542,8 +615,9 @@
             </select></div>
           <div class="form-group"><label class="form-label">Honoraires réels TTC (€)</label><input class="form-input" id="c-hon-ttc" type="number" placeholder="15 000"/></div>
           <div class="form-group"><label class="form-label">Honoraires réels HT (auto)</label><input class="form-input auto" id="c-hon-ht" type="number" readonly placeholder="calculé"/></div>
+          <div class="form-group"><label class="form-label">CA HT négociateur (auto = Hon. HT × UV)</label><input class="form-input hi" id="c-ca" type="number" readonly placeholder="calculé"/></div>
           <div class="form-group"><label class="form-label">% Commission négociateur</label><input class="form-input" id="c-pct" type="number" placeholder="ex: 22"/></div>
-          <div class="form-group"><label class="form-label">CA négociateur HT (auto)</label><input class="form-input hi" id="c-ca" type="number" readonly placeholder="calculé"/></div>
+          <div class="form-group"><label class="form-label">Rémunération HT (auto = CA HT × %)</label><input class="form-input hi" id="c-remu" type="number" readonly placeholder="calculé"/></div>
         </div>
         <div class="form-actions">
           <button class="btn-p" id="btn-save-c">Enregistrer le compromis</button>
@@ -703,11 +777,16 @@
     // Compromis auto-calc
     const cHon=document.getElementById('c-hon-ttc'),cPct=document.getElementById('c-pct')
     const calcCom=()=>{
-      const ht=(parseFloat(cHon?.value)||0)/1.20,p=parseFloat(cPct?.value)||0,ca=ht*p/100
+      const ht=(parseFloat(cHon?.value)||0)/1.20
+      const uv=parseFloat(document.getElementById('c-uv')?.value)||0
+      const ca=ht*uv
+      const remu=ca*(parseFloat(cPct?.value)||0)/100
       const eh=document.getElementById('c-hon-ht');if(eh)eh.value=ht?ht.toFixed(2):''
       const ec=document.getElementById('c-ca');if(ec)ec.value=ca?ca.toFixed(2):''
+      const er=document.getElementById('c-remu');if(er)er.value=remu?remu.toFixed(2):''
     }
     if(cHon)cHon.oninput=calcCom;if(cPct)cPct.oninput=calcCom
+    const cUv=document.getElementById('c-uv');if(cUv)cUv.onchange=calcCom
     // Compromis lier mandat
     const cMid=document.getElementById('c-mid')
     if(cMid) cMid.onchange=()=>{
@@ -780,6 +859,8 @@
     })
     // Edit mandats
     document.querySelectorAll('[data-edit-m]').forEach(b=>b.onclick=()=>openEditMandat(b.dataset.editM))
+    // Edit compromis
+    document.querySelectorAll('[data-edit-c]').forEach(b=>b.onclick=()=>openEditCompromis(b.dataset.editC))
     // Delete compromis
     document.querySelectorAll('[data-del-c]').forEach(b=>b.onclick=async()=>{
       if(!confirm('Supprimer ce compromis ?'))return
